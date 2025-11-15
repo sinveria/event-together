@@ -1,6 +1,12 @@
 from pydantic import BaseModel
 from datetime import datetime
 
+class ChatMessageBase(BaseModel):
+    text: str
+
+class ChatMessageCreate(ChatMessageBase):
+    pass
+
 class ChatMessage(BaseModel):
     id: int
     group_id: int
@@ -8,3 +14,6 @@ class ChatMessage(BaseModel):
     username: str
     text: str
     timestamp: datetime
+
+    class Config:
+        from_attributes = True
