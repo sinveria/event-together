@@ -32,11 +32,3 @@ def get_db():
         yield db
     finally:
         db.close()
-
-if __name__ == "__main__":
-    try:
-        with engine.connect() as conn:
-            result = conn.execute("SELECT 1")
-            print("✅ Подключение к БД успешно!", result.fetchone())
-    except Exception as e:
-        print("❌ Ошибка подключения:", e)
