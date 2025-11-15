@@ -18,7 +18,7 @@ app.include_router(chat_endpoints.router, prefix="/chat", tags=["Chat"])
 app.include_router(attendance_endpoints.router, prefix="/attendance", tags=["Attendance"])
 app.include_router(users.router, prefix="/users", tags=["Users"])
 
-@app.get("/health")
+@app.get("/")
 def health_check():
     return {"status": "ok"}
 
