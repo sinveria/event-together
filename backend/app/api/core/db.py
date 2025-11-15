@@ -1,13 +1,30 @@
-from sqlalchemy import create_engine
-from sqlalchemy.ext.declarative import declarative_base
-from sqlalchemy.orm import sessionmaker
+from sqlalchemy import create_engine, URL
+from sqlalchemy.orm import sessionmaker, declarative_base
+from sqlalchemy.pool import NullPool
 import os
+from dotenv import load_dotenv
 
-DATABASE_URL = os.getenv("DATABASE_URL", "postgresql://username:password@localhost/eventtogether")
+load_dotenv()
 
-engine = create_engine(DATABASE_URL)
+DATABASE_URL = URL.create(
+    drivername="postgresql+psycopg",
+    username=os.getenv("DB_USER", "username"),
+    password=os.getenv("DB_PASSWORD", "password"),
+    host=os.getenv("DB_HOST", "localhost"),
+    port=int(os.getenv("DB_PORT", "5432")),
+    database=os.getenv("DB_NAME", "eventtogether"),
+)
+
+engine = create_engine(
+    DATABASE_URL,
+    poolclass=NullPool,
+    echo=False,
+)
+
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+
 Base = declarative_base()
+
 
 def get_db():
     db = SessionLocal()
@@ -15,3 +32,11 @@ def get_db():
         yield db
     finally:
         db.close()
+
+if __name__ == "__main__":
+    try:
+        with engine.connect() as conn:
+            result = conn.execute("SELECT 1")
+            print("✅ Подключение к БД успешно!", result.fetchone())
+    except Exception as e:
+        print("❌ Ошибка подключения:", e)

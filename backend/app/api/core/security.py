@@ -5,9 +5,12 @@ from passlib.context import CryptContext
 from fastapi import Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer
 from sqlalchemy.orm import Session
-from backend.app.core.db import get_db
+from backend.app.api.core.db import get_db
 from backend.app.api.models.user import User
 import os
+from dotenv import load_dotenv
+
+load_dotenv()
 
 # secret key for JWT
 SECRET_KEY = os.getenv("SECRET_KEY", "your-secret-key-change-in-production")
