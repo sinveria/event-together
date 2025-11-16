@@ -2,7 +2,7 @@ import { Link } from 'react-router-dom';
 
 const Header = () => {
   return (
-    <header className="absolute top-0 left-0 right-0 z-20 p-4 bg-transparent"> {/* bg-transparent — ключевое! */}
+    <header className="absolute top-0 left-0 right-0 z-20 p-4 bg-transparent">
       <div className="container mx-auto flex justify-between items-center">
         <nav>
           <ul className="flex space-x-6">
