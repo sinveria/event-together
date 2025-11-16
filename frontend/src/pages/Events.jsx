@@ -3,9 +3,10 @@ import Button from '../components/Button';
 import EventCard from '../components/EventCard';
 import arrowone from '../assets/img/arrowone.png';
 import arrowtwo from '../assets/img/arrowtwo.png';
+import question from '../assets/img/question.png';
 
 const Events = () => {
-    // заглышки - данные событий для теста верстки
+    // заглушки - данные событий для теста верстки
     const events = [
         {
             id: 1,
@@ -105,6 +106,34 @@ const Events = () => {
                         {events.map(event => (
                             <EventCard key={event.id} event={event} />
                         ))}
+                    </div>
+                </div>
+            </section>
+
+            <section className="pb-20 bg-white">
+                <div className="mx-48">
+                    <div className="flex items-center gap-4 mb-12">
+                        <h2 className="text-4xl md:text-5xl font-bold text-black">
+                            Как это работает
+                        </h2>
+                        <img
+                            src={question}
+                            alt="Вопрос"
+                            className="w-24 h-24 object-contain"
+                        />
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                        <div>
+                            <p className="text-lg text-gray-700 leading-relaxed">
+                                Присоединяйтесь к любому мероприятию, нажав на его название, и посмотрите, кто еще его посещает. Пригласите друзей или познакомьтесь с новыми людьми с общими интересами.
+                            </p>
+                        </div>
+                        <div>
+                            <p className="text-lg text-gray-700 leading-relaxed">
+                                На всех мероприятиях отображаются важные детали, такие как дата, местоположение и краткое описание, которые помогут вам выбрать то, что подходит именно вам.
+                            </p>
+                        </div>
                     </div>
                 </div>
             </section>
