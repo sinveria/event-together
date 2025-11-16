@@ -3,6 +3,7 @@ import Header from './components/Header';
 import Footer from './components/Footer';
 import Home from './pages/Home';
 import Events from './pages/Events';
+import CreateEvent from './pages/CreateEvent';
 
 function App() {
   return (
@@ -13,6 +14,7 @@ function App() {
           <Routes>
             <Route path="/" element={<Home />} />
             <Route path="/events" element={<Events />} />
+            <Route path="/create-event" element={<CreateEvent />} />
           </Routes>
         </main>
         <Footer />
