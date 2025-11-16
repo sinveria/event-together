@@ -1,11 +1,17 @@
 import { Link } from 'react-router-dom';
 import Button from '../components/Button';
 import EventCard from '../components/EventCard';
+import SearchBar from '../components/SearchBar';
+import FilterButtons from '../components/FilterButtons';
 import arrowone from '../assets/img/arrowone.png';
 import arrowtwo from '../assets/img/arrowtwo.png';
 import question from '../assets/img/question.png';
+import { useState, useMemo } from 'react';
 
 const Events = () => {
+    const [searchTerm, setSearchTerm] = useState('');
+    const [activeFilter, setActiveFilter] = useState('all');
+
     // заглушки - данные событий для теста верстки
     const events = [
         {
@@ -14,7 +20,8 @@ const Events = () => {
             date: "25 сентября",
             fullDate: "25 сентября 2026, 19:00",
             description: "Знакомство с современным искусством и обсуждение выставки с куратором",
-            location: "Москва, Художественная галерея, ул. Тверская, 25"
+            location: "Москва, Художественная галерея, ул. Тверская, 25",
+            category: 'art'
         },
         {
             id: 2,
@@ -22,7 +29,8 @@ const Events = () => {
             date: "28 сентября",
             fullDate: "28 сентября 2026, 10:00",
             description: "Пеший поход по живописным местам Подмосковья с пикником",
-            location: "Подмосковье, старт от станции Перхушково"
+            location: "Подмосковье, старт от станции Перхушково",
+            category: 'sport'
         },
         {
             id: 3,
@@ -30,7 +38,8 @@ const Events = () => {
             date: "3 октября",
             fullDate: "3 октября 2026, 20:00",
             description: "Знакомство с винными регионами Италии и дегустация лучших сортов",
-            location: "Москва, Винный бар 'Бочка', ул. Пятницкая, 42"
+            location: "Москва, Винный бар 'Бочка', ул. Пятницкая, 42",
+            category: 'food'
         },
         {
             id: 4,
@@ -38,7 +47,8 @@ const Events = () => {
             date: "6 октября",
             fullDate: "6 октября 2026, 18:30",
             description: "Обсуждение романа 'Мастер и Маргарита' и встреча с литературным критиком",
-            location: "Москва, Книжный магазин 'Читай-город', ул. Арбат, 15"
+            location: "Москва, Книжный магазин 'Читай-город', ул. Арбат, 15",
+            category: 'education'
         },
         {
             id: 5,
@@ -46,7 +56,8 @@ const Events = () => {
             date: "10 октября",
             fullDate: "10 октября 2026, 21:00",
             description: "Показ классического кино под открытым небом с попкорном и напитками",
-            location: "Москва, Парк Горького, летний кинотеатр"
+            location: "Москва, Парк Горького, летний кинотеатр",
+            category: 'art'
         },
         {
             id: 6,
@@ -54,9 +65,20 @@ const Events = () => {
             date: "15 октября",
             fullDate: "15 октября 2026, 19:00",
             description: "Мастер-класс по приготовлению традиционных тайских блюд от шеф-повара",
-            location: "Москва, Кулинарная студия 'Восток', ул. Большая Дорогомиловская, 8"
+            location: "Москва, Кулинарная студия 'Восток', ул. Большая Дорогомиловская, 8",
+            category: 'food'
         }
     ];
+
+    const filteredEvents = useMemo(() => {
+        return events.filter(event => {
+            const matchesSearch = event.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                                event.description.toLowerCase().includes(searchTerm.toLowerCase());
+            const matchesFilter = activeFilter === 'all' || event.category === activeFilter;
+            
+            return matchesSearch && matchesFilter;
+        });
+    }, [searchTerm, activeFilter, events]);
 
     return (
         <div className="min-h-screen bg-white">
@@ -100,12 +122,38 @@ const Events = () => {
                 </div>
             </section>
 
+            <section className="pb-12 bg-white">
+                <div className="mx-48">
+                    <div className="flex flex-col items-center gap-6">
+                        <div className="max-w-md w-full">
+                            <SearchBar 
+                                searchTerm={searchTerm}
+                                onSearchChange={setSearchTerm}
+                            />
+                        </div>
+                        
+                        <FilterButtons 
+                            activeFilter={activeFilter}
+                            onFilterChange={setActiveFilter}
+                        />
+                    </div>
+                </div>
+            </section>
+
             <section className="pb-20 bg-white">
                 <div className="mx-48">
                     <div className="border-t border-gray-200">
-                        {events.map(event => (
+                        {filteredEvents.map(event => (
                             <EventCard key={event.id} event={event} />
                         ))}
+                        
+                        {filteredEvents.length === 0 && (
+                            <div className="text-center py-12">
+                                <p className="text-xl text-gray-500">
+                                    Мероприятия не найдены. Попробуйте изменить параметры поиска.
+                                </p>
+                            </div>
+                        )}
                     </div>
                 </div>
             </section>
