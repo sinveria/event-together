@@ -7,7 +7,7 @@ import sys
 
 sys.path.append(os.path.dirname(os.path.dirname(__file__)))
 
-from backend.app.core.db import Base
+from backend.app.api.core.db import Base
 from backend.app.api.models import user, event, group, chat, attendance
 
 config = context.config
