@@ -1,26 +1,44 @@
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import Button from '../components/Button';
 import FormInput from '../components/FormInput';
 import arrowleftlogin from '../assets/img/arrowleftlogin.png';
 import arrowrightlogin from '../assets/img/arrowrightlogin.png';
 import { useState } from 'react';
+import { useAuth } from '../context/AuthContext';
 
 const Login = () => {
     const [formData, setFormData] = useState({
         email: '',
         password: ''
     });
+    const [error, setError] = useState('');
+    const [loading, setLoading] = useState(false);
+    
+    const { login } = useAuth();
+    const navigate = useNavigate();
 
     const handleInputChange = (field) => (e) => {
         setFormData(prev => ({
             ...prev,
             [field]: e.target.value
         }));
+        setError('');
     };
 
-    const handleSubmit = (e) => {
+    const handleSubmit = async (e) => {
         e.preventDefault();
-        console.log('Вход:', formData);
+        setLoading(true);
+        setError('');
+
+        const result = await login(formData.email, formData.password);
+        
+        if (result.success) {
+            navigate('/');
+        } else {
+            setError(result.error);
+        }
+        
+        setLoading(false);
     };
 
     return (
@@ -53,6 +71,12 @@ const Login = () => {
                         </div>
 
                         <form onSubmit={handleSubmit} className="bg-white p-6 rounded-lg">
+                            {error && (
+                                <div className="mb-4 p-3 bg-red-100 border border-red-400 text-red-700 rounded">
+                                    {error}
+                                </div>
+                            )}
+                            
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
                                 <FormInput
                                     label="Почта"
@@ -60,6 +84,7 @@ const Login = () => {
                                     value={formData.email}
                                     onChange={handleInputChange('email')}
                                     type="email"
+                                    required
                                 />
 
                                 <FormInput
@@ -68,6 +93,7 @@ const Login = () => {
                                     value={formData.password}
                                     onChange={handleInputChange('password')}
                                     type="password"
+                                    required
                                 />
                             </div>
 
@@ -85,9 +111,12 @@ const Login = () => {
 
                             <Button
                                 type="submit"
-                                className="w-full py-4 text-lg text-white bg-[#323FF0] hover:bg-[#2a35cc] rounded-lg"
+                                disabled={loading}
+                                className={`w-full py-4 text-lg text-white bg-[#323FF0] hover:bg-[#2a35cc] rounded-lg ${
+                                    loading ? 'opacity-50 cursor-not-allowed' : ''
+                                }`}
                             >
-                                Войти в аккаунт
+                                {loading ? 'Вход...' : 'Войти в аккаунт'}
                             </Button>
                         </form>
                     </div>
