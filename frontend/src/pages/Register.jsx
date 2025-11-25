@@ -31,7 +31,6 @@ const Register = () => {
         setLoading(true);
         setError('');
 
-        // Валидация
         if (formData.password.length < 6) {
             setError('Пароль должен содержать минимум 6 символов');
             setLoading(false);
@@ -43,7 +42,7 @@ const Register = () => {
         if (result.success) {
             const loginResult = await login(formData.email, formData.password);
             if (loginResult.success) {
-                navigate('/');
+                navigate('/success');
             } else {
                 navigate('/login');
             }

@@ -9,6 +9,8 @@ import Login from './pages/Login';
 import Register from './pages/Register';
 import ForgotPassword from './pages/ForgotPassword';
 import Groups from './pages/Groups';
+import Profile from './pages/Profile';
+import SuccessNotification from './components/SuccessNotification';
 
 function App() {
   return (
@@ -25,6 +27,8 @@ function App() {
               <Route path="/register" element={<Register />} />
               <Route path="/forgot-password" element={<ForgotPassword />} />
               <Route path="/groups" element={<Groups />} />
+              <Route path="/profile" element={<Profile />} />
+              <Route path="/success" element={<SuccessNotification />} />
             </Routes>
           </main>
           <Footer />
