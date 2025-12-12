@@ -20,7 +20,7 @@ class User(Base):
     avatar_url = Column(String(500), nullable=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
 
-    organized_events = relationship("Event", back_populates="organizer")
+    organized_events = relationship("Event", back_populates="organizer", lazy='dynamic')
     organized_groups = relationship("Group", back_populates="organizer")
     messages = relationship("ChatMessage", back_populates="user")
     attendance_records = relationship("Attendance", back_populates="user")

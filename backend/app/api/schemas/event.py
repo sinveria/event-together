@@ -1,6 +1,7 @@
 from pydantic import BaseModel
 from datetime import datetime
 from typing import Optional
+from .user import UserResponse
 
 class EventBase(BaseModel):
     title: str
@@ -24,10 +25,11 @@ class EventUpdate(BaseModel):
 class Catalog(BaseModel):
     id: int
     title: str
+    description: str
     date: datetime
     location: str
     price: float
-    organizer: str
+    organizer_name: str
     max_participants: int
 
     class Config:
@@ -35,7 +37,8 @@ class Catalog(BaseModel):
 
 class EventResponse(EventBase):
     id: int
-    organizer: str
+    organizer_id: int
+    organizer_name: str
     current_participants: int = 0
     created_at: datetime
 

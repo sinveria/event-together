@@ -35,18 +35,35 @@ api.interceptors.response.use(
 );
 
 export const authAPI = {
-  login: (email, password) => 
+  login: (email, password) =>
     api.post('/auth/login', `username=${email}&password=${password}`, {
       headers: {
         'Content-Type': 'application/x-www-form-urlencoded',
       },
     }),
-  
-  register: (userData) => 
+
+  register: (userData) =>
     api.post('/auth/register', userData),
-  
-  getProfile: () => 
+
+  getProfile: () =>
     api.get('/users/me'),
+};
+
+export const eventsAPI = {
+  getAllEvents: (params = {}) =>
+    api.get('/events/', { params }),
+
+  getEvent: (id) =>
+    api.get(`/events/${id}`),
+
+  createEvent: (eventData) =>
+    api.post('/events/', eventData),
+
+  updateEvent: (id, eventData) =>
+    api.put(`/events/${id}`, eventData),
+
+  deleteEvent: (id) =>
+    api.delete(`/events/${id}`),
 };
 
 export default api;
