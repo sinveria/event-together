@@ -8,14 +8,7 @@ from backend.app.api.core.security import get_current_user
 router = APIRouter()
 
 @router.get("/me", response_model=UserResponse)
-async def get_profile(current_user: User = Depends(get_current_user)):
-    return current_user
-
-@router.get("/me", response_model=UserResponse)
-async def get_current_user_profile(
-    current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db)
-):
+async def get_current_user_profile(current_user: User = Depends(get_current_user)):
     return current_user
 
 @router.put("/me", response_model=UserResponse)
@@ -24,12 +17,10 @@ async def update_profile(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
-    if user_data.name is not None:
-        current_user.name = user_data.name
-    if user_data.interests is not None:
-        current_user.interests = user_data.interests
-    if user_data.avatar_url is not None:
-        current_user.avatar_url = user_data.avatar_url
+    update_data = user_data.dict(exclude_unset=True)
+    
+    for field, value in update_data.items():
+        setattr(current_user, field, value)
     
     db.commit()
     db.refresh(current_user)

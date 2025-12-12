@@ -49,6 +49,17 @@ export const authAPI = {
     api.get('/users/me'),
 };
 
+export const userAPI = {
+  getProfile: () =>
+    api.get('/users/me'),
+  
+  updateProfile: (userData) =>
+    api.put('/users/me', userData),
+  
+  deleteProfile: () =>
+    api.delete('/users/me'),
+};
+
 export const eventsAPI = {
   getAllEvents: (params = {}) =>
     api.get('/events/', { params }),

@@ -1,18 +1,21 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useNavigate, Link } from 'react-router-dom';
 import exclamationIcon from '../assets/img/exclamation.png';
 import emailIcon from '../assets/img/emailimg.png';
 import penIcon from '../assets/img/pen.png';
+import { userAPI } from '../services/api';
 
 const Profile = () => {
-    const { user, logout } = useAuth();
+    const { user, logout, updateUser } = useAuth();
     const navigate = useNavigate();
 
     const [isEditingName, setIsEditingName] = useState(false);
     const [isEditingAbout, setIsEditingAbout] = useState(false);
-    const [name, setName] = useState(user?.name || '');
-    const [about, setAbout] = useState(user?.about || 'we live in a society');
+    const [name, setName] = useState('');
+    const [about, setAbout] = useState('');
+    const [isSaving, setIsSaving] = useState(false);
+    const [error, setError] = useState('');
 
     const [visitedEvents, setVisitedEvents] = useState([
         {
@@ -27,31 +30,98 @@ const Profile = () => {
         }
     ]);
 
+    useEffect(() => {
+        if (user) {
+            setName(user.name || '');
+            setAbout(user.about || 'Расскажите о себе...');
+        }
+    }, [user]);
+
     const handleLogout = () => {
         logout();
         navigate('/login');
     };
 
-    const handleNameSave = () => {
-        setIsEditingName(false);
-        console.log('Новое имя:', name);
+    const handleNameSave = async () => {
+        if (!name.trim()) {
+            setError('Имя не может быть пустым');
+            return;
+        }
+
+        try {
+            setIsSaving(true);
+            setError('');
+
+            await userAPI.updateProfile({ name: name.trim() });
+
+            if (updateUser) {
+                updateUser({ name: name.trim() });
+            }
+            
+            setIsEditingName(false);
+            console.log('Имя обновлено:', name);
+        } catch (error) {
+            setError('Ошибка при сохранении имени: ' + (error.response?.data?.detail || error.message));
+        } finally {
+            setIsSaving(false);
+        }
     };
 
-    const handleAboutSave = () => {
-        setIsEditingAbout(false);
-        console.log('Новое описание:', about);
+    const handleAboutSave = async () => {
+        try {
+            setIsSaving(true);
+            setError('');
+            
+            await userAPI.updateProfile({ about: about.trim() });
+            
+            if (updateUser) {
+                updateUser({ about: about.trim() });
+            }
+            
+            setIsEditingAbout(false);
+            console.log('Описание обновлено:', about);
+        } catch (error) {
+            setError('Ошибка при сохранении описания: ' + (error.response?.data?.detail || error.message));
+        } finally {
+            setIsSaving(false);
+        }
     };
 
-    const handlePhotoUpload = (event) => {
+    const handlePhotoUpload = async (event) => {
         const file = event.target.files[0];
-        if (file) {
-            console.log('Загружаем фото:', file);
+        if (!file) return;
+
+        try {
+            setIsSaving(true);
+            setError('');
+            
+            const formData = new FormData();
+            formData.append('avatar', file);
+            
+            await userAPI.uploadAvatar(formData);
+            
+            if (updateUser) {
+                const response = await userAPI.getProfile();
+                updateUser(response.data);
+            }
+            
+            console.log('Фото обновлено');
+        } catch (error) {
+            setError('Ошибка при загрузке фото: ' + (error.response?.data?.detail || error.message));
+        } finally {
+            setIsSaving(false);
         }
     };
 
     return (
         <div className="min-h-screen bg-white pt-20">
             <div className="container mx-auto py-8">
+                {/* Сообщение об ошибке */}
+                {error && (
+                    <div className="mb-4 p-3 bg-red-100 text-red-700 rounded-lg">
+                        {error}
+                    </div>
+                )}
 
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
                     <div className="lg:col-span-2 space-y-6">
@@ -77,21 +147,31 @@ const Profile = () => {
                                                 onKeyPress={(e) => e.key === 'Enter' && handleNameSave()}
                                                 className="flex-1 border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[#327BF0]"
                                                 autoFocus
+                                                disabled={isSaving}
                                             />
                                             <button
                                                 onClick={handleNameSave}
-                                                className="bg-[#327BF0] text-white px-4 py-2 rounded-lg hover:bg-[#2a35cc]"
+                                                disabled={isSaving}
+                                                className="bg-[#327BF0] text-white px-4 py-2 rounded-lg hover:bg-[#2a35cc] disabled:opacity-50 disabled:cursor-not-allowed"
                                             >
-                                                ✓
+                                                {isSaving ? '...' : '✓'}
+                                            </button>
+                                            <button
+                                                onClick={() => setIsEditingName(false)}
+                                                disabled={isSaving}
+                                                className="bg-gray-300 text-gray-700 px-4 py-2 rounded-lg hover:bg-gray-400 disabled:opacity-50"
+                                            >
+                                                ✗
                                             </button>
                                         </div>
                                     ) : (
                                         <div className="flex items-center justify-between">
                                             <div className="flex items-center justify-between w-full">
-                                                <p className="text-lg text-gray-900">{name}</p>
+                                                <p className="text-lg text-gray-900">{name || 'Не указано'}</p>
                                                 <button
                                                     onClick={() => setIsEditingName(true)}
                                                     className="hover:opacity-70 transition-opacity ml-4"
+                                                    disabled={isSaving}
                                                 >
                                                     <img src={penIcon} alt="Редактировать" className="w-5 h-5" />
                                                 </button>
@@ -104,13 +184,10 @@ const Profile = () => {
                                     <label className="block text-sm font-medium text-gray-700 mb-2">Почта</label>
                                     <div className="flex items-center justify-between">
                                         <div className="flex items-center justify-between w-full">
-                                            <p className="text-lg text-gray-900">{user?.email}</p>
-                                            <button
-                                                onClick={() => { }}
-                                                className="hover:opacity-70 transition-opacity ml-4"
-                                            >
-                                                <img src={penIcon} alt="Редактировать" className="w-5 h-5" />
-                                            </button>
+                                            <p className="text-lg text-gray-900">{user?.email || 'Не указана'}</p>
+                                            <span className="text-sm text-gray-500 ml-4">
+                                                (изменить нельзя)
+                                            </span>
                                         </div>
                                     </div>
                                 </div>
@@ -135,17 +212,21 @@ const Profile = () => {
                                         rows="4"
                                         className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[#327BF0]"
                                         autoFocus
+                                        disabled={isSaving}
+                                        placeholder="Расскажите о себе..."
                                     />
                                     <div className="flex gap-2">
                                         <button
                                             onClick={handleAboutSave}
-                                            className="bg-[#327BF0] text-white px-4 py-2 rounded-lg hover:bg-[#2a35cc]"
+                                            disabled={isSaving}
+                                            className="bg-[#327BF0] text-white px-4 py-2 rounded-lg hover:bg-[#2a35cc] disabled:opacity-50 disabled:cursor-not-allowed"
                                         >
-                                            Сохранить
+                                            {isSaving ? 'Сохранение...' : 'Сохранить'}
                                         </button>
                                         <button
                                             onClick={() => setIsEditingAbout(false)}
-                                            className="bg-gray-300 text-gray-700 px-4 py-2 rounded-lg hover:bg-gray-400"
+                                            disabled={isSaving}
+                                            className="bg-gray-300 text-gray-700 px-4 py-2 rounded-lg hover:bg-gray-400 disabled:opacity-50"
                                         >
                                             Отмена
                                         </button>
@@ -154,10 +235,13 @@ const Profile = () => {
                             ) : (
                                 <div className="flex items-start justify-between">
                                     <div className="flex items-start justify-between w-full">
-                                        <p className="text-lg text-gray-700 flex-1">{about}</p>
+                                        <p className="text-lg text-gray-700 flex-1">
+                                            {about || 'Расскажите о себе...'}
+                                        </p>
                                         <button
                                             onClick={() => setIsEditingAbout(true)}
                                             className="hover:opacity-70 transition-opacity ml-4 mt-1"
+                                            disabled={isSaving}
                                         >
                                             <img src={penIcon} alt="Редактировать" className="w-5 h-5" />
                                         </button>
