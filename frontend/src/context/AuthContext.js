@@ -29,6 +29,8 @@ export function AuthProvider({ children }) {
       console.error('Auth check failed:', error);
       logout();
     }
+
+    console.log('checkAuth завершен, loading = false');
     setLoading(false);
   };
 
@@ -36,12 +38,12 @@ export function AuthProvider({ children }) {
     try {
       const response = await authAPI.login(email, password);
       const { access_token } = response.data;
-      
+
       localStorage.setItem('access_token', access_token);
-      
+
       const userResponse = await authAPI.getProfile();
       setUser(userResponse.data);
-      
+
       return { success: true };
     } catch (error) {
       const errorMessage = error.response?.data?.detail || 'Login failed';

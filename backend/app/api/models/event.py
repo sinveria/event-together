@@ -19,3 +19,7 @@ class Event(Base):
     organizer = relationship("User", back_populates="organized_events", lazy='joined')
     groups = relationship("Group", back_populates="event")
     attendance_records = relationship("Attendance", back_populates="event")
+    
+    @property
+    def organizer_name(self):
+        return self.organizer.name if self.organizer else "Неизвестно"

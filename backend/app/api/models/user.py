@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, DateTime, Table, ForeignKey
+from sqlalchemy import Column, Integer, String, DateTime, Table, ForeignKey, Boolean, Enum
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
 from backend.app.api.core.db import Base
@@ -18,6 +18,8 @@ class User(Base):
     name = Column(String(100), nullable=False)
     hashed_password = Column(String(255), nullable=False)
     avatar_url = Column(String(500), nullable=True)
+    role = Column(String(20), default="user", nullable=False)
+    is_active = Column(Boolean, default=True, nullable=False)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
 
     organized_events = relationship("Event", back_populates="organizer", lazy='dynamic')
