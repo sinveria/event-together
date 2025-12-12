@@ -6,8 +6,8 @@ from backend.app.api.core.db import Base
 group_members = Table(
     'group_members',
     Base.metadata,
-    Column('user_id', Integer, ForeignKey('users.id')),
-    Column('group_id', Integer, ForeignKey('groups.id'))
+    Column('user_id', Integer, ForeignKey('users.id'), primary_key=True),
+    Column('group_id', Integer, ForeignKey('groups.id'), primary_key=True)
 )
 
 class Group(Base):
@@ -26,3 +26,11 @@ class Group(Base):
     organizer = relationship("User", back_populates="organized_groups")
     members = relationship("User", secondary=group_members, back_populates="groups")
     messages = relationship("ChatMessage", back_populates="group")
+    
+    @property
+    def members_count(self):
+        return len(self.members) if self.members else 0
+    
+    @property
+    def organizer_name(self):
+        return self.organizer.name if self.organizer else "Неизвестно"

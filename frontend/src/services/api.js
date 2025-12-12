@@ -72,10 +72,22 @@ export const adminAPI = {
   updateUser: (id, userData) => api.put(`/admin/users/${id}`, userData),
   deleteUser: (id) => api.delete(`/admin/users/${id}`),
   toggleUserActive: (id) => api.post(`/admin/users/${id}/toggle-active`),
-  
+
   getEvents: () => api.get('/admin/events'),
   updateEvent: (id, eventData) => api.put(`/admin/events/${id}`, eventData),
   deleteEvent: (id) => api.delete(`/admin/events/${id}`),
+};
+
+export const groupsAPI = {
+  getGroups: () => api.get('/groups/'),
+  getGroupsByEvent: (eventId) => api.get(`/events/${eventId}/groups`),
+  createGroup: (groupData) => api.post('/groups/', groupData),
+  getGroup: (id) => api.get(`/groups/${id}`),
+  updateGroup: (id, groupData) => api.put(`/groups/${id}`, groupData),
+  deleteGroup: (id) => api.delete(`/groups/${id}`),
+  joinGroup: (id) => api.post(`/groups/${id}/join`),
+  leaveGroup: (id) => api.post(`/groups/${id}/leave`),
+  checkMembership: (id) => api.get(`/groups/${id}/check-membership`),
 };
 
 export default api;

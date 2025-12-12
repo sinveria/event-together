@@ -1,65 +1,57 @@
+import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import Button from '../components/Button';
 import GroupCard from '../components/GroupCard';
+import { groupsAPI } from '../services/api';
 
 const Groups = () => {
-    // данные групп по событиям
-    const groups = [
-        {
-            id: 1,
-            name: "Арт-сообщество Москвы",
-            membersCount: 47,
-            upcomingEvents: 3,
-            description: "Группа для посещения выставок, вернисажей и арт-мероприятий в Москве. Обсуждаем современное искусство и встречаемся с художниками.",
-            tags: ["искусство", "выставки", "москва", "культура"],
-            nextEventDate: "28 сент",
-            organizer: "Анна Петрова",
-            events: [
-                "Выставка современного искусства - 28 сентября",
-                "Встреча с куратором - 5 октября",
-                "Экскурсия в Третьяковку - 12 октября"
-            ],
-            activity: {
-                messages: "1.2к",
-                online: 12
-            }
-        },
-        {
-            id: 2,
-            name: "Активный отдых Подмосковье",
-            membersCount: 32,
-            upcomingEvents: 2,
-            description: "Организуем пешие походы, велопрогулки и пикники в Подмосковье. Подходит для начинающих и опытных туристов.",
-            tags: ["походы", "природа", "спорт", "отдых"],
-            nextEventDate: "1 окт",
-            organizer: "Иван Сидоров",
-            events: [
-                "Поход в лесопарк - 1 октября",
-                "Велопрогулка по набережной - 8 октября"
-            ],
-            activity: {
-                messages: "856",
-                online: 8
-            }
-        },
-        {
-            id: 3,
-            name: "Винный клуб Дегустации",
-            membersCount: 28,
-            upcomingEvents: 1,
-            description: "Регулярные дегустации вин из разных регионов мира. Учимся разбираться в винах и находим новые вкусы.",
-            tags: ["вино", "дегустации", "гастрономия", "вкус"],
-            nextEventDate: "5 окт",
-            organizer: "Мария Козлова",
-            events: [
-                "Итальянские вина - 5 октября"
-            ],
-            activity: {
-                messages: "432",
-                online: 5
-            }
+    const [groups, setGroups] = useState([]);
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState(null);
+
+    useEffect(() => {
+        loadGroups();
+    }, []);
+
+    const loadGroups = async () => {
+        try {
+            setLoading(true);
+            setError(null);
+
+            const response = await groupsAPI.getGroups();
+            
+            setGroups(response.data);
+        } catch (error) {
+            setError('Не удалось загрузить список групп. Попробуйте позже.');
+        } finally {
+            setLoading(false);
         }
-    ];
+    };
+
+    const transformGroupData = (group) => ({
+        id: group.id,
+        name: group.name,
+        membersCount: group.members_count || 1,
+        upcomingEvents: 1,
+        description: group.description || 'Без описания',
+        tags: [
+            group.is_open ? 'открытая' : 'закрытая',
+            `макс. ${group.max_members} чел.`
+        ],
+        nextEventDate: 'Скоро',
+        organizer: group.organizer_name || 'Организатор',
+        events: [group.event?.title || 'Событие'],
+        activity: {
+            messages: '0',
+            online: 0
+        },
+        is_open: group.is_open,
+        max_members: group.max_members
+    });
+
+    const handleGroupUpdate = () => {
+        loadGroups();
+    };
 
     return (
         <div className="min-h-screen bg-gray-50">
@@ -108,44 +100,44 @@ const Groups = () => {
                         </p>
                     </div>
 
-                    <div className="space-y-6">
-                        {groups.map(group => (
-                            <GroupCard key={group.id} group={group} />
-                        ))}
-                    </div>
-                </div>
-            </section>
+                    {error && (
+                        <div className="text-center py-12 text-red-600">
+                            <p>{error}</p>
+                        </div>
+                    )}
 
-            <section className="py-16 bg-white">
-                <div className="container mx-auto px-4">
-                    <div className="max-w-4xl mx-auto">
-                        <h2 className="text-4xl md:text-5xl font-bold text-gray-900 text-center mb-12">
-                            Почему группы?
-                        </h2>
-                        
-                        <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-                            <div className="text-center">
-                                <h3 className="text-xl font-bold text-gray-900 mb-3">Сообщество</h3>
-                                <p className="text-gray-600">
-                                    Находите людей с общими интересами и делитесь опытом
+                    {loading ? (
+                        <div className="text-center py-12">
+                            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500 mx-auto mb-4"></div>
+                            <p className="text-gray-500">Загрузка групп...</p>
+                        </div>
+                    ) : groups.length > 0 ? (
+                        <div className="space-y-6">
+                            {groups.map(group => (
+                                <GroupCard
+                                    key={group.id}
+                                    group={transformGroupData(group)}
+                                    onUpdate={handleGroupUpdate}
+                                />
+                            ))}
+                        </div>
+                    ) : (
+                        <div className="text-center py-12">
+                            <div className="max-w-md mx-auto">
+                                <h3 className="text-2xl font-bold text-gray-900 mb-4">Групп пока нет</h3>
+                                <p className="text-gray-600 mb-6">
+                                    Будьте первым, кто создаст группу для совместного посещения событий!
                                 </p>
-                            </div>
-                            
-                            <div className="text-center">
-                                <h3 className="text-xl font-bold text-gray-900 mb-3">События</h3>
-                                <p className="text-gray-600">
-                                    Участвуйте в мероприятиях, организованных специально для группы
-                                </p>
-                            </div>
-                            
-                            <div className="text-center">
-                                <h3 className="text-xl font-bold text-gray-900 mb-3">Общение</h3>
-                                <p className="text-gray-600">
-                                    Обсуждайте темы, делитесь впечатлениями и планируйте встречи
-                                </p>
+                                <Button
+                                    as={Link}
+                                    to="/create-group"
+                                    className="px-6 py-3 text-white bg-blue-600 hover:bg-blue-700 rounded-lg"
+                                >
+                                    Создать первую группу
+                                </Button>
                             </div>
                         </div>
-                    </div>
+                    )}
                 </div>
             </section>
         </div>

@@ -12,6 +12,7 @@ import Groups from './pages/Groups';
 import Profile from './pages/Profile';
 import SuccessNotification from './components/SuccessNotification';
 import Admin from './pages/Admin';
+import CreateGroupPage from './pages/CreateGroup'
 
 function App() {
   return (
@@ -31,6 +32,7 @@ function App() {
               <Route path="/profile" element={<Profile />} />
               <Route path="/success" element={<SuccessNotification />} />
               <Route path="/admin" element={<Admin />} />
+              <Route path="/create-group" element={<CreateGroupPage />} />
             </Routes>
           </main>
           <Footer />

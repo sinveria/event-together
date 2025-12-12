@@ -1,6 +1,6 @@
 from typing import List
 from fastapi import APIRouter, Depends, HTTPException, status
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, joinedload, selectinload
 from backend.app.api.core.db import get_db
 from backend.app.api.models.group import Group, group_members
 from backend.app.api.models.user import User
@@ -12,9 +12,49 @@ from sqlalchemy import select
 router = APIRouter()
 
 @router.get("/", response_model=List[GroupCatalog])
-async def get_groups(db: Session = Depends(get_db)):
-    groups = db.query(Group).all()
-    return groups
+async def get_groups(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    
+    groups = db.query(Group).options(
+        joinedload(Group.organizer),
+        selectinload(Group.members)
+    ).all()
+    
+    result = []
+    for group in groups:
+        is_member = False
+        if current_user:
+            member_ids = [member.id for member in group.members]
+            is_member = current_user.id in member_ids
+        
+        result.append({
+            "id": group.id,
+            "event_id": group.event_id,
+            "name": group.name,
+            "members_count": group.members_count,
+            "max_members": group.max_members,
+            "is_open": group.is_open,
+            "organizer_name": group.organizer_name,
+            "current_user_is_member": is_member
+        })
+    
+    return result
+
+@router.get("/{group_id}/check-membership")
+async def check_group_membership(
+    group_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    group = db.query(Group).options(selectinload(Group.members)).filter(Group.id == group_id).first()
+    if not group:
+        raise HTTPException(status_code=404, detail="Group not found")
+
+    is_member = any(member.id == current_user.id for member in group.members)
+    
+    return {"is_member": is_member}
 
 @router.post("/", response_model=GroupResponse)
 async def create_group(
@@ -86,14 +126,15 @@ async def join_group(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
-    group = db.query(Group).filter(Group.id == group_id).first()
+    group = db.query(Group).options(selectinload(Group.members)).filter(Group.id == group_id).first()
     if not group:
         raise HTTPException(status_code=404, detail="Group not found")
     
     if not group.is_open:
         raise HTTPException(status_code=400, detail="Group is closed")
     
-    if current_user in group.members:
+    member_ids = [member.id for member in group.members]
+    if current_user.id in member_ids:
         raise HTTPException(status_code=400, detail="Already a member of this group")
     
     if len(group.members) >= group.max_members:
@@ -109,11 +150,12 @@ async def leave_group(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
-    group = db.query(Group).filter(Group.id == group_id).first()
+    group = db.query(Group).options(selectinload(Group.members)).filter(Group.id == group_id).first()
     if not group:
         raise HTTPException(status_code=404, detail="Group not found")
-    
-    if current_user not in group.members:
+
+    member_ids = [member.id for member in group.members]
+    if current_user.id not in member_ids:
         raise HTTPException(status_code=400, detail="Not a member of this group")
     
     if group.organizer_id == current_user.id:
