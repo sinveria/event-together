@@ -1,9 +1,10 @@
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import Button from '../components/Button';
 import FormInput from '../components/FormInput';
 import arrowleftlogin from '../assets/img/arrowleftlogin.png';
 import arrowrightlogin from '../assets/img/arrowrightlogin.png';
 import { useState } from 'react';
+import { useAuth } from '../context/AuthContext';
 
 const Register = () => {
     const [formData, setFormData] = useState({
@@ -11,17 +12,45 @@ const Register = () => {
         email: '',
         password: ''
     });
+    const [error, setError] = useState('');
+    const [loading, setLoading] = useState(false);
+    
+    const { register, login } = useAuth();
+    const navigate = useNavigate();
 
     const handleInputChange = (field) => (e) => {
         setFormData(prev => ({
             ...prev,
             [field]: e.target.value
         }));
+        setError('');
     };
 
-    const handleSubmit = (e) => {
+    const handleSubmit = async (e) => {
         e.preventDefault();
-        console.log('Регистрация:', formData);
+        setLoading(true);
+        setError('');
+
+        if (formData.password.length < 6) {
+            setError('Пароль должен содержать минимум 6 символов');
+            setLoading(false);
+            return;
+        }
+
+        const result = await register(formData);
+        
+        if (result.success) {
+            const loginResult = await login(formData.email, formData.password);
+            if (loginResult.success) {
+                navigate('/success');
+            } else {
+                navigate('/login');
+            }
+        } else {
+            setError(result.error);
+        }
+        
+        setLoading(false);
     };
 
     return (
@@ -54,6 +83,12 @@ const Register = () => {
                         </div>
 
                         <form onSubmit={handleSubmit} className="bg-white p-6 rounded-lg">
+                            {error && (
+                                <div className="mb-4 p-3 bg-red-100 border border-red-400 text-red-700 rounded">
+                                    {error}
+                                </div>
+                            )}
+                            
                             <div className="space-y-6 mb-6">
                                 <FormInput
                                     label="Имя"
@@ -61,6 +96,7 @@ const Register = () => {
                                     value={formData.name}
                                     onChange={handleInputChange('name')}
                                     type="text"
+                                    required
                                 />
 
                                 <FormInput
@@ -69,14 +105,16 @@ const Register = () => {
                                     value={formData.email}
                                     onChange={handleInputChange('email')}
                                     type="email"
+                                    required
                                 />
 
                                 <FormInput
                                     label="Пароль"
-                                    placeholder="Введите пароль"
+                                    placeholder="Введите пароль (минимум 6 символов)"
                                     value={formData.password}
                                     onChange={handleInputChange('password')}
                                     type="password"
+                                    required
                                 />
                             </div>
 
@@ -101,9 +139,12 @@ const Register = () => {
 
                             <Button
                                 type="submit"
-                                className="w-full py-4 text-lg text-white bg-[#323FF0] hover:bg-[#2a35cc] rounded-lg"
+                                disabled={loading}
+                                className={`w-full py-4 text-lg text-white bg-[#323FF0] hover:bg-[#2a35cc] rounded-lg ${
+                                    loading ? 'opacity-50 cursor-not-allowed' : ''
+                                }`}
                             >
-                                Создать учетную запись
+                                {loading ? 'Регистрация...' : 'Создать учетную запись'}
                             </Button>
                         </form>
                     </div>

@@ -15,7 +15,13 @@ class Event(Base):
     organizer_id = Column(Integer, ForeignKey("users.id"), nullable=False)
     max_participants = Column(Integer, nullable=False)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
-    
-    organizer = relationship("User", back_populates="organized_events")
+    category_id = Column(Integer, ForeignKey("categories.id"), nullable=True)
+
+    organizer = relationship("User", back_populates="organized_events", lazy='joined')
+    category = relationship("Category", back_populates="events")
     groups = relationship("Group", back_populates="event")
     attendance_records = relationship("Attendance", back_populates="event")
+    
+    @property
+    def organizer_name(self):
+        return self.organizer.name if self.organizer else "Неизвестно"

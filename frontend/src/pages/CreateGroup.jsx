@@ -1,52 +1,57 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import Button from '../components/Button';
 import FormInput from '../components/FormInput';
+import Button from '../components/Button';
 import createeventleft from '../assets/img/createeventleft.png';
 import createeventright from '../assets/img/createeventright.png';
-import { eventsAPI, categoriesAPI } from '../services/api';
+import { groupsAPI, eventsAPI } from '../services/api';
 
-const CreateEvent = () => {
+const CreateGroupPage = () => {
     const navigate = useNavigate();
-    const { user } = useAuth();
+    const { user, isAuthenticated } = useAuth();
 
     const [formData, setFormData] = useState({
-        title: '',
+        name: '',
         description: '',
-        date: '',
-        location: '',
-        price: 0,
-        max_participants: 10,
-        category_id: ''
+        event_id: '',
+        max_members: 10,
+        is_open: true
     });
 
-    const [categories, setCategories] = useState([]);
-    const [loadingCategories, setLoadingCategories] = useState(false);
     const [errors, setErrors] = useState({});
     const [loading, setLoading] = useState(false);
     const [successMessage, setSuccessMessage] = useState('');
+    const [events, setEvents] = useState([]);
+    const [loadingEvents, setLoadingEvents] = useState(true);
 
     useEffect(() => {
-        const loadCategories = async () => {
-            try {
-                setLoadingCategories(true);
-                const response = await categoriesAPI.getCategories();
-                setCategories(response.data);
-            } catch (error) {
-                console.error('Ошибка загрузки категорий:', error);
-            } finally {
-                setLoadingCategories(false);
-            }
-        };
+        if (!isAuthenticated) {
+            navigate('/login');
+            return;
+        }
 
-        loadCategories();
-    }, []);
+        loadEvents();
+    }, [isAuthenticated, navigate]);
+
+    const loadEvents = async () => {
+        try {
+            setLoadingEvents(true);
+            const eventsResponse = await eventsAPI.getAllEvents();
+            setEvents(eventsResponse.data);
+        } catch (error) {
+            console.error('Ошибка загрузки событий:', error);
+            setErrors({ submit: 'Не удалось загрузить список событий' });
+        } finally {
+            setLoadingEvents(false);
+        }
+    };
 
     const handleInputChange = (field) => (e) => {
+        const { value, type, checked } = e.target;
         setFormData(prev => ({
             ...prev,
-            [field]: e.target.value
+            [field]: type === 'checkbox' ? checked : value
         }));
         if (errors[field]) {
             setErrors(prev => ({ ...prev, [field]: '' }));
@@ -54,40 +59,41 @@ const CreateEvent = () => {
     };
 
     const handleNumberChange = (field) => (e) => {
-        const value = parseFloat(e.target.value) || 0;
+        const value = parseInt(e.target.value) || 0;
         setFormData(prev => ({
             ...prev,
             [field]: value
         }));
     };
 
-    const handleCategoryChange = (e) => {
-        const value = e.target.value === '' ? null : parseInt(e.target.value);
+    const handleSelectChange = (e) => {
+        const value = e.target.value;
         setFormData(prev => ({
             ...prev,
-            category_id: value
+            event_id: value
         }));
-        if (errors.category_id) {
-            setErrors(prev => ({ ...prev, category_id: '' }));
+        if (errors.event_id) {
+            setErrors(prev => ({ ...prev, event_id: '' }));
         }
     };
 
     const validateForm = () => {
         const newErrors = {};
 
-        if (!formData.title.trim()) newErrors.title = 'Введите название события';
-        if (!formData.description.trim()) newErrors.description = 'Введите описание';
-        if (!formData.date) newErrors.date = 'Выберите дату и время';
-        if (!formData.location.trim()) newErrors.location = 'Введите местоположение';
-        if (formData.max_participants < 1) newErrors.max_participants = 'Минимум 1 участник';
-        if (formData.price < 0) newErrors.price = 'Цена не может быть отрицательной';
-
-        if (formData.date) {
-            const eventDate = new Date(formData.date);
-            const now = new Date();
-            if (eventDate <= now) {
-                newErrors.date = 'Дата должна быть в будущем';
-            }
+        if (!formData.name.trim()) {
+            newErrors.name = 'Введите название группы';
+        } else if (formData.name.length < 3) {
+            newErrors.name = 'Название должно быть не менее 3 символов';
+        }
+        
+        if (!formData.event_id) {
+            newErrors.event_id = 'Выберите событие';
+        }
+        
+        if (formData.max_members < 2) {
+            newErrors.max_members = 'Минимальное количество участников - 2';
+        } else if (formData.max_members > 100) {
+            newErrors.max_members = 'Максимальное количество участников - 100';
         }
 
         return newErrors;
@@ -96,8 +102,7 @@ const CreateEvent = () => {
     const handleSubmit = async (e) => {
         e.preventDefault();
 
-        if (!user) {
-            alert('Для создания события необходимо войти в систему');
+        if (!isAuthenticated) {
             navigate('/login');
             return;
         }
@@ -113,48 +118,60 @@ const CreateEvent = () => {
         setSuccessMessage('');
 
         try {
-            const eventData = {
+            const groupData = {
                 ...formData,
-                date: new Date(formData.date).toISOString(),
-                price: parseFloat(formData.price) || 0,
-                max_participants: parseInt(formData.max_participants) || 10,
-                category_id: formData.category_id || null
+                event_id: parseInt(formData.event_id),
+                max_members: parseInt(formData.max_members)
             };
 
-            const response = await eventsAPI.createEvent(eventData);
+            const response = await groupsAPI.createGroup(groupData);
 
             if (response.status === 201 || response.status === 200) {
-                setSuccessMessage('Событие успешно создано!');
+                setSuccessMessage('Группа успешно создана!');
 
                 setFormData({
-                    title: '',
+                    name: '',
                     description: '',
-                    date: '',
-                    location: '',
-                    price: 0,
-                    max_participants: 10,
-                    category_id: ''
+                    event_id: '',
+                    max_members: 10,
+                    is_open: true
                 });
 
                 setTimeout(() => {
-                    setSuccessMessage('');
-                }, 5000);
+                    navigate('/groups');
+                }, 2000);
             }
         } catch (error) {
-            console.error('Ошибка при создании события:', error);
+            console.error('Ошибка при создании группы:', error);
 
             if (error.response?.status === 401) {
-                alert('Сессия истекла. Пожалуйста, войдите снова.');
                 navigate('/login');
             } else if (error.response?.data?.detail) {
                 setErrors({ submit: error.response.data.detail });
             } else {
-                setErrors({ submit: 'Ошибка при создании события. Попробуйте еще раз.' });
+                setErrors({ submit: 'Ошибка при создании группы. Попробуйте еще раз.' });
             }
         } finally {
             setLoading(false);
         }
     };
+
+    if (!isAuthenticated) {
+        return (
+            <div className="min-h-screen bg-white pt-20 flex items-center justify-center">
+                <div className="text-center">
+                    <h2 className="text-2xl font-bold text-gray-900 mb-4">Необходима авторизация</h2>
+                    <p className="text-gray-600 mb-6">Для создания группы войдите в систему</p>
+                    <Button
+                        onClick={() => navigate('/login')}
+                        className="px-6 py-3 text-white bg-blue-600 hover:bg-blue-700 rounded-lg"
+                    >
+                        Войти
+                    </Button>
+                </div>
+            </div>
+        );
+    }
 
     return (
         <div className="min-h-screen bg-white">
@@ -164,13 +181,13 @@ const CreateEvent = () => {
                         <div className="text-center mb-12">
                             <h1 className="text-4xl md:text-5xl font-bold text-white mb-8">
                                 <span className="bg-[#327BF0] px-6 py-3 rounded-lg inline-block">
-                                    Создайте событие
+                                    Создайте группу
                                 </span>
                             </h1>
 
                             <p className="text-3xl md:text-4xl font-bold text-black leading-relaxed">
-                                Создайте событие, чтобы к вашей компании<br />
-                                присоединились
+                                Создайте группу, чтобы совместно посещать<br />
+                                мероприятия с единомышленниками
                             </p>
                         </div>
 
@@ -203,11 +220,11 @@ const CreateEvent = () => {
                         <form onSubmit={handleSubmit} className="bg-white p-8 rounded-lg relative">
                             <div className="relative mb-4">
                                 <FormInput
-                                    label="Название события"
-                                    placeholder="Введите название события"
-                                    value={formData.title}
-                                    onChange={handleInputChange('title')}
-                                    error={errors.title}
+                                    label="Название группы"
+                                    placeholder="Введите название группы"
+                                    value={formData.name}
+                                    onChange={handleInputChange('name')}
+                                    error={errors.name}
                                     required
                                 />
 
@@ -226,83 +243,67 @@ const CreateEvent = () => {
 
                             <FormInput
                                 label="Описание"
-                                placeholder="Опишите ваше событие"
+                                placeholder="Опишите цели группы и тематику"
                                 value={formData.description}
                                 onChange={handleInputChange('description')}
                                 isTextarea={true}
                                 rows="4"
                                 error={errors.description}
-                                required
                             />
 
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
                                 <FormInput
-                                    label="Дата и время"
-                                    placeholder=""
-                                    value={formData.date}
-                                    onChange={handleInputChange('date')}
-                                    type="datetime-local"
-                                    error={errors.date}
+                                    label="Событие для группы"
+                                    placeholder="Выберите событие"
+                                    value={formData.event_id}
+                                    onChange={handleSelectChange}
+                                    isSelect={true}
+                                    options={events.map(event => ({
+                                        id: event.id,
+                                        name: `${event.title} (${new Date(event.date).toLocaleDateString('ru-RU')})`
+                                    }))}
+                                    error={errors.event_id}
                                     required
-                                />
-
-                                <FormInput
-                                    label="Местоположение"
-                                    placeholder="Где будет проходить событие?"
-                                    value={formData.location}
-                                    onChange={handleInputChange('location')}
-                                    error={errors.location}
-                                    required
-                                />
-                            </div>
-
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
-                                <FormInput
-                                    label="Цена (₽)"
-                                    placeholder="0.00"
-                                    value={formData.price}
-                                    onChange={handleNumberChange('price')}
-                                    type="number"
-                                    min="0"
-                                    step="0.01"
-                                    error={errors.price}
+                                    disabled={loadingEvents}
                                 />
 
                                 <FormInput
                                     label="Максимум участников"
                                     placeholder="10"
-                                    value={formData.max_participants}
-                                    onChange={handleNumberChange('max_participants')}
+                                    value={formData.max_members}
+                                    onChange={handleNumberChange('max_members')}
                                     type="number"
-                                    min="1"
+                                    min="2"
+                                    max="100"
                                     step="1"
-                                    error={errors.max_participants}
+                                    error={errors.max_members}
                                     required
                                 />
                             </div>
 
-                            <FormInput
-                                label="Категория (необязательно)"
-                                placeholder="Выберите категорию..."
-                                value={formData.category_id || ''}
-                                onChange={handleCategoryChange}
-                                isSelect={true}
-                                options={categories.map(category => ({
-                                    id: category.id,
-                                    name: category.name
-                                }))}
-                                error={errors.category_id}
-                                disabled={loadingCategories}
-                            />
+                            <div className="mb-6">
+                                <div className="flex items-center">
+                                    <input
+                                        type="checkbox"
+                                        id="is_open"
+                                        checked={formData.is_open}
+                                        onChange={handleInputChange('is_open')}
+                                        className="h-5 w-5 text-blue-600 rounded focus:ring-blue-500"
+                                    />
+                                    <label htmlFor="is_open" className="ml-3 text-sm text-gray-700">
+                                        Открытая группа (новые участники могут присоединяться)
+                                    </label>
+                                </div>
+                            </div>
 
                             <Button
                                 type="submit"
-                                disabled={loading}
+                                disabled={loading || loadingEvents}
                                 className={`w-full py-4 text-lg text-white bg-[#323FF0] hover:bg-[#2a35cc] rounded-lg mt-6 ${
-                                    loading ? 'opacity-50 cursor-not-allowed' : ''
+                                    loading || loadingEvents ? 'opacity-50 cursor-not-allowed' : ''
                                 }`}
                             >
-                                {loading ? 'Создание...' : 'Создать событие'}
+                                {loading ? 'Создание...' : loadingEvents ? 'Загрузка событий...' : 'Создать группу'}
                             </Button>
 
                             <p className="text-sm text-gray-500 mt-4">
@@ -316,4 +317,4 @@ const CreateEvent = () => {
     );
 };
 
-export default CreateEvent;
+export default CreateGroupPage;
