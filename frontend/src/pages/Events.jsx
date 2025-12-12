@@ -58,7 +58,9 @@ const Events = () => {
             location: event.location || 'Место не указано',
             price: event.price || 0,
             maxParticipants: event.max_participants || 0,
-            organizer: event.organizer_name || event.organizer || 'Неизвестно'
+            organizer: event.organizer_name || event.organizer || 'Неизвестно',
+            category_id: event.category_id || null,
+            category_name: event.category_name || null
         };
     };
 
@@ -67,7 +69,10 @@ const Events = () => {
         .filter(event => {
             const matchesSearch = event.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
                 event.description.toLowerCase().includes(searchTerm.toLowerCase());
-            const matchesFilter = activeFilter === 'all';
+
+            const matchesFilter = activeFilter === 'all' ||
+                (activeFilter === 'none' && !event.category_name) ||
+                event.category_id === activeFilter;
 
             return matchesSearch && matchesFilter;
         });

@@ -1,3 +1,4 @@
+// components/EventCard.jsx
 import React, { useState } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useNavigate } from 'react-router-dom';
@@ -21,8 +22,8 @@ const EventCard = ({ event }) => {
   };
 
   const hasDescription = event.description && event.description.trim() !== '';
-  
   const hasPrice = event.price !== undefined && event.price !== null && event.price > 0;
+  const hasCategory = event.category_name && event.category_name.trim() !== '';
 
   return (
     <>
@@ -31,10 +32,15 @@ const EventCard = ({ event }) => {
           className="cursor-pointer hover:bg-gray-50 transition-colors duration-200 flex items-center justify-between py-6 w-full"
           onClick={() => setIsExpanded(!isExpanded)}
         >
-          <div className="flex justify-start">
+          <div className="flex items-center gap-4">
             <span className="bg-[#323FF0] text-white px-4 py-2 rounded-lg text-lg font-medium">
               {event.title}
             </span>
+            {hasCategory && (
+              <span className="bg-gray-100 text-gray-700 px-3 py-1 rounded-full text-sm">
+                {event.category_name}
+              </span>
+            )}
           </div>
 
           <div className="flex items-center gap-4">
@@ -77,6 +83,13 @@ const EventCard = ({ event }) => {
                 
                 <h4 className="font-bold text-gray-900 mt-4 mb-2">Организатор:</h4>
                 <p className="text-gray-700">{event.organizer || 'Не указан'}</p>
+                
+                {hasCategory && (
+                  <>
+                    <h4 className="font-bold text-gray-900 mt-4 mb-2">Категория:</h4>
+                    <p className="text-gray-700">{event.category_name}</p>
+                  </>
+                )}
                 
                 {event.maxParticipants && (
                   <>

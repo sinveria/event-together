@@ -1,11 +1,11 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import Button from '../components/Button';
 import FormInput from '../components/FormInput';
 import createeventleft from '../assets/img/createeventleft.png';
 import createeventright from '../assets/img/createeventright.png';
-import { eventsAPI } from '../services/api';
+import { eventsAPI, categoriesAPI } from '../services/api';
 
 const CreateEvent = () => {
     const navigate = useNavigate();
@@ -17,12 +17,32 @@ const CreateEvent = () => {
         date: '',
         location: '',
         price: 0,
-        max_participants: 10
+        max_participants: 10,
+        category_id: ''  // Добавьте это поле
     });
 
+    const [categories, setCategories] = useState([]);
+    const [loadingCategories, setLoadingCategories] = useState(false);
     const [errors, setErrors] = useState({});
     const [loading, setLoading] = useState(false);
     const [successMessage, setSuccessMessage] = useState('');
+
+    // Загружаем категории
+    useEffect(() => {
+        const loadCategories = async () => {
+            try {
+                setLoadingCategories(true);
+                const response = await categoriesAPI.getCategories();
+                setCategories(response.data);
+            } catch (error) {
+                console.error('Ошибка загрузки категорий:', error);
+            } finally {
+                setLoadingCategories(false);
+            }
+        };
+
+        loadCategories();
+    }, []);
 
     const handleInputChange = (field) => (e) => {
         setFormData(prev => ({
@@ -39,6 +59,14 @@ const CreateEvent = () => {
         setFormData(prev => ({
             ...prev,
             [field]: value
+        }));
+    };
+
+    const handleCategoryChange = (e) => {
+        const value = e.target.value === '' ? null : parseInt(e.target.value);
+        setFormData(prev => ({
+            ...prev,
+            category_id: value
         }));
     };
 
@@ -87,7 +115,8 @@ const CreateEvent = () => {
                 ...formData,
                 date: new Date(formData.date).toISOString(),
                 price: parseFloat(formData.price) || 0,
-                max_participants: parseInt(formData.max_participants) || 10
+                max_participants: parseInt(formData.max_participants) || 10,
+                category_id: formData.category_id || null  // Преобразуем пустую строку в null
             };
 
             const response = await eventsAPI.createEvent(eventData);
@@ -95,13 +124,15 @@ const CreateEvent = () => {
             if (response.status === 201 || response.status === 200) {
                 setSuccessMessage('Событие успешно создано!');
 
+                // Сбрасываем форму
                 setFormData({
                     title: '',
                     description: '',
                     date: '',
                     location: '',
                     price: 0,
-                    max_participants: 10
+                    max_participants: 10,
+                    category_id: ''
                 });
 
                 setTimeout(() => {
@@ -247,6 +278,33 @@ const CreateEvent = () => {
                                     error={errors.max_participants}
                                     required
                                 />
+                            </div>
+
+                            {/* Добавьте поле выбора категории */}
+                            <div className="mb-6">
+                                <label className="block text-sm font-medium text-gray-700 mb-2">
+                                    Категория (необязательно)
+                                </label>
+                                <select
+                                    value={formData.category_id || ''}
+                                    onChange={handleCategoryChange}
+                                    className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[#327BF0]"
+                                    disabled={loadingCategories}
+                                >
+                                    <option value="">Выберите категорию...</option>
+                                    {loadingCategories ? (
+                                        <option disabled>Загрузка категорий...</option>
+                                    ) : (
+                                        categories.map(category => (
+                                            <option key={category.id} value={category.id}>
+                                                {category.name}
+                                            </option>
+                                        ))
+                                    )}
+                                </select>
+                                {errors.category_id && (
+                                    <p className="mt-1 text-sm text-red-600">{errors.category_id}</p>
+                                )}
                             </div>
 
                             <Button
