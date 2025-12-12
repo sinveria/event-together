@@ -11,10 +11,12 @@ const Admin = () => {
     const [activeTab, setActiveTab] = useState('users');
     const [users, setUsers] = useState([]);
     const [events, setEvents] = useState([]);
+    const [groups, setGroups] = useState([]);
     const [dataLoading, setDataLoading] = useState(true);
     const [searchTerm, setSearchTerm] = useState('');
     const [editingUser, setEditingUser] = useState(null);
     const [editingEvent, setEditingEvent] = useState(null);
+    const [editingGroup, setEditingGroup] = useState(null);
 
     const filteredUsers = useMemo(() => {
         return users.filter(user =>
@@ -30,6 +32,14 @@ const Admin = () => {
             event.organizer_name?.toLowerCase().includes(searchTerm.toLowerCase())
         );
     }, [events, searchTerm]);
+
+    const filteredGroups = useMemo(() => {
+        return groups.filter(group =>
+            group.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+            group.description?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+            group.organizer_name?.toLowerCase().includes(searchTerm.toLowerCase())
+        );
+    }, [groups, searchTerm]);
 
     useEffect(() => {
         if (authLoading) {
@@ -59,6 +69,9 @@ const Admin = () => {
             } else if (activeTab === 'events') {
                 const response = await adminAPI.getEvents();
                 setEvents(response.data);
+            } else if (activeTab === 'groups') {
+                const response = await adminAPI.getGroups();
+                setGroups(response.data);
             }
         } catch (error) {
             alert('Ошибка загрузки данных: ' + (error.response?.data?.detail || error.message));
@@ -74,7 +87,6 @@ const Admin = () => {
             await adminAPI.toggleUserActive(userId);
             loadData();
         } catch (error) {
-            console.error('Ошибка:', error);
             alert('Ошибка изменения статуса пользователя');
         }
     };
@@ -86,7 +98,6 @@ const Admin = () => {
             await adminAPI.deleteUser(userId);
             loadData();
         } catch (error) {
-            console.error('Ошибка:', error);
             alert('Ошибка удаления пользователя');
         }
     };
@@ -98,8 +109,29 @@ const Admin = () => {
             await adminAPI.deleteEvent(eventId);
             loadData();
         } catch (error) {
-            console.error('Ошибка:', error);
             alert('Ошибка удаления события');
+        }
+    };
+
+    const handleToggleGroupStatus = async (groupId) => {
+        if (!window.confirm('Изменить статус группы?')) return;
+
+        try {
+            await adminAPI.toggleGroupStatus(groupId);
+            loadData();
+        } catch (error) {
+            alert('Ошибка изменения статуса группы');
+        }
+    };
+
+    const handleDeleteGroup = async (groupId) => {
+        if (!window.confirm('Удалить группу?')) return;
+
+        try {
+            await adminAPI.deleteGroup(groupId);
+            loadData();
+        } catch (error) {
+            alert('Ошибка удаления группы');
         }
     };
 
@@ -154,6 +186,12 @@ const Admin = () => {
                         className={`pb-2 px-4 ${activeTab === 'events' ? 'border-b-2 border-blue-500 text-blue-600' : 'text-gray-500'}`}
                     >
                         События
+                    </button>
+                    <button
+                        onClick={() => setActiveTab('groups')}
+                        className={`pb-2 px-4 ${activeTab === 'groups' ? 'border-b-2 border-blue-500 text-blue-600' : 'text-gray-500'}`}
+                    >
+                        Группы
                     </button>
                 </div>
 
@@ -299,6 +337,78 @@ const Admin = () => {
                                                 <tr>
                                                     <td colSpan="7" className="px-6 py-4 text-center text-gray-500">
                                                         События не найдены
+                                                    </td>
+                                                </tr>
+                                            )}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        )}
+
+                        {activeTab === 'groups' && (
+                            <div className="bg-white rounded-lg border border-gray-200">
+                                <div className="overflow-x-auto">
+                                    <table className="min-w-full divide-y divide-gray-200">
+                                        <thead className="bg-gray-50">
+                                            <tr>
+                                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">ID</th>
+                                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Название</th>
+                                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Описание</th>
+                                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Участников</th>
+                                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Статус</th>
+                                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Организатор</th>
+                                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Дата создания</th>
+                                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Действия</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody className="bg-white divide-y divide-gray-200">
+                                            {filteredGroups.length > 0 ? (
+                                                filteredGroups.map(group => (
+                                                    <tr key={group.id} className="hover:bg-gray-50">
+                                                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{group.id}</td>
+                                                        <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{group.name}</td>
+                                                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 max-w-xs truncate">
+                                                            {group.description || 'Нет описания'}
+                                                        </td>
+                                                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                                                            {group.members_count}/{group.max_members}
+                                                        </td>
+                                                        <td className="px-6 py-4 whitespace-nowrap">
+                                                            <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${group.is_open ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>
+                                                                {group.is_open ? 'Открытая' : 'Закрытая'}
+                                                            </span>
+                                                        </td>
+                                                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{group.organizer_name}</td>
+                                                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                                                            {new Date(group.created_at).toLocaleDateString('ru-RU')}
+                                                        </td>
+                                                        <td className="px-6 py-4 whitespace-nowrap text-sm font-medium space-x-2">
+                                                            <button
+                                                                onClick={() => setEditingGroup(group)}
+                                                                className="text-blue-600 hover:text-blue-900"
+                                                            >
+                                                                Изменить
+                                                            </button>
+                                                            <button
+                                                                onClick={() => handleToggleGroupStatus(group.id)}
+                                                                className="text-yellow-600 hover:text-yellow-900"
+                                                            >
+                                                                {group.is_open ? 'Закрыть' : 'Открыть'}
+                                                            </button>
+                                                            <button
+                                                                onClick={() => handleDeleteGroup(group.id)}
+                                                                className="text-red-600 hover:text-red-900"
+                                                            >
+                                                                Удалить
+                                                            </button>
+                                                        </td>
+                                                    </tr>
+                                                ))
+                                            ) : (
+                                                <tr>
+                                                    <td colSpan="8" className="px-6 py-4 text-center text-gray-500">
+                                                        Группы не найдены
                                                     </td>
                                                 </tr>
                                             )}

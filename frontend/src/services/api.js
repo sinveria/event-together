@@ -76,6 +76,11 @@ export const adminAPI = {
   getEvents: () => api.get('/admin/events'),
   updateEvent: (id, eventData) => api.put(`/admin/events/${id}`, eventData),
   deleteEvent: (id) => api.delete(`/admin/events/${id}`),
+
+  getGroups: () => api.get('/admin/groups'),
+  updateGroup: (id, groupData) => api.put(`/admin/groups/${id}`, groupData),
+  deleteGroup: (id) => api.delete(`/admin/groups/${id}`),
+  toggleGroupStatus: (id) => api.post(`/admin/groups/${id}/toggle-status`),
 };
 
 export const groupsAPI = {

@@ -20,11 +20,13 @@ class GroupCatalog(BaseModel):
     id: int
     event_id: int
     name: str
+    description: Optional[str] = None
     members_count: int
     max_members: int
     is_open: bool
     organizer_name: str
-    current_user_is_member: Optional[bool] = None 
+    current_user_is_member: Optional[bool] = None
+    created_at: datetime
 
     class Config:
         from_attributes = True

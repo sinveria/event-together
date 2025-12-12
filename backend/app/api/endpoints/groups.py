@@ -33,10 +33,12 @@ async def get_groups(
             "id": group.id,
             "event_id": group.event_id,
             "name": group.name,
+            "description": group.description,
             "members_count": group.members_count,
             "max_members": group.max_members,
             "is_open": group.is_open,
             "organizer_name": group.organizer_name,
+            "created_at": group.created_at,
             "current_user_is_member": is_member
         })
     
