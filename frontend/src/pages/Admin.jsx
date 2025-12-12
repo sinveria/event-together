@@ -3,6 +3,7 @@ import { useAuth } from '../context/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import FormInput from '../components/FormInput';
 import { adminAPI } from '../services/api';
+import AdminCategories from '../components/AdminCategories';
 
 const Admin = () => {
     const { user, isAuthenticated, loading: authLoading } = useAuth();
@@ -193,6 +194,12 @@ const Admin = () => {
                     >
                         Группы
                     </button>
+                    <button
+                        onClick={() => setActiveTab('categories')}
+                        className={`pb-2 px-4 ${activeTab === 'categories' ? 'border-b-2 border-blue-500 text-blue-600' : 'text-gray-500'}`}
+                    >
+                        Категории
+                    </button>
                 </div>
 
                 <div className="mb-6">
@@ -235,8 +242,8 @@ const Admin = () => {
                                                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{user.email}</td>
                                                         <td className="px-6 py-4 whitespace-nowrap">
                                                             <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${user.role === 'admin' ? 'bg-red-100 text-red-800' :
-                                                                    user.role === 'moderator' ? 'bg-blue-100 text-blue-800' :
-                                                                        'bg-green-100 text-green-800'
+                                                                user.role === 'moderator' ? 'bg-blue-100 text-blue-800' :
+                                                                    'bg-green-100 text-green-800'
                                                                 }`}>
                                                                 {user.role === 'admin' ? 'Админ' :
                                                                     user.role === 'moderator' ? 'Модератор' : 'Пользователь'}
@@ -416,6 +423,10 @@ const Admin = () => {
                                     </table>
                                 </div>
                             </div>
+                        )}
+
+                        {activeTab === 'categories' && (
+                            <AdminCategories />
                         )}
                     </>
                 )}

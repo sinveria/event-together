@@ -77,6 +77,13 @@ export const eventsAPI = {
     api.delete(`/events/${id}`),
 };
 
+export const categoriesAPI = {
+  getCategories: () => api.get('/categories/'),
+  createCategory: (categoryData) => api.post('/categories/', categoryData),
+  updateCategory: (id, categoryData) => api.put(`/categories/${id}`, categoryData),
+  deleteCategory: (id) => api.delete(`/categories/${id}`),
+};
+
 export const adminAPI = {
   getUsers: () => api.get('/admin/users'),
   getUser: (id) => api.get(`/admin/users/${id}`),
@@ -92,6 +99,11 @@ export const adminAPI = {
   updateGroup: (id, groupData) => api.put(`/admin/groups/${id}`, groupData),
   deleteGroup: (id) => api.delete(`/admin/groups/${id}`),
   toggleGroupStatus: (id) => api.post(`/admin/groups/${id}/toggle-status`),
+
+  getCategories: () => api.get('/categories/'),
+  createCategory: (categoryData) => api.post('/categories/', categoryData),
+  updateCategory: (id, categoryData) => api.put(`/categories/${id}`, categoryData),
+  deleteCategory: (id) => api.delete(`/categories/${id}`),
 };
 
 export const groupsAPI = {
