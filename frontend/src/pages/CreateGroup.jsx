@@ -5,7 +5,7 @@ import FormInput from '../components/FormInput';
 import Button from '../components/Button';
 import createeventleft from '../assets/img/createeventleft.png';
 import createeventright from '../assets/img/createeventright.png';
-import { groupsAPI } from '../services/api';
+import { groupsAPI, eventsAPI } from '../services/api';
 
 const CreateGroupPage = () => {
     const navigate = useNavigate();
@@ -23,6 +23,7 @@ const CreateGroupPage = () => {
     const [loading, setLoading] = useState(false);
     const [successMessage, setSuccessMessage] = useState('');
     const [events, setEvents] = useState([]);
+    const [loadingEvents, setLoadingEvents] = useState(true);
 
     useEffect(() => {
         if (!isAuthenticated) {
@@ -35,14 +36,14 @@ const CreateGroupPage = () => {
 
     const loadEvents = async () => {
         try {
-            const response = await groupsAPI.getGroups();
-            // Используйте eventsAPI для загрузки событий
-            const eventsResponse = await import('../services/api').then(module => 
-                module.eventsAPI.getAllEvents()
-            );
+            setLoadingEvents(true);
+            const eventsResponse = await eventsAPI.getAllEvents();
             setEvents(eventsResponse.data);
         } catch (error) {
             console.error('Ошибка загрузки событий:', error);
+            setErrors({ submit: 'Не удалось загрузить список событий' });
+        } finally {
+            setLoadingEvents(false);
         }
     };
 
@@ -219,7 +220,7 @@ const CreateGroupPage = () => {
                         <form onSubmit={handleSubmit} className="bg-white p-8 rounded-lg relative">
                             <div className="relative mb-4">
                                 <FormInput
-                                    label="Название группы *"
+                                    label="Название группы"
                                     placeholder="Введите название группы"
                                     value={formData.name}
                                     onChange={handleInputChange('name')}
@@ -251,32 +252,23 @@ const CreateGroupPage = () => {
                             />
 
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
-                                <div>
-                                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                                        Событие для группы *
-                                    </label>
-                                    <select
-                                        value={formData.event_id}
-                                        onChange={handleSelectChange}
-                                        className={`w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition ${
-                                            errors.event_id ? 'border-red-500' : ''
-                                        }`}
-                                        required
-                                    >
-                                        <option value="">Выберите событие</option>
-                                        {events.map(event => (
-                                            <option key={event.id} value={event.id}>
-                                                {event.title} ({new Date(event.date).toLocaleDateString('ru-RU')})
-                                            </option>
-                                        ))}
-                                    </select>
-                                    {errors.event_id && (
-                                        <p className="mt-1 text-sm text-red-600">{errors.event_id}</p>
-                                    )}
-                                </div>
+                                <FormInput
+                                    label="Событие для группы"
+                                    placeholder="Выберите событие"
+                                    value={formData.event_id}
+                                    onChange={handleSelectChange}
+                                    isSelect={true}
+                                    options={events.map(event => ({
+                                        id: event.id,
+                                        name: `${event.title} (${new Date(event.date).toLocaleDateString('ru-RU')})`
+                                    }))}
+                                    error={errors.event_id}
+                                    required
+                                    disabled={loadingEvents}
+                                />
 
                                 <FormInput
-                                    label="Максимум участников *"
+                                    label="Максимум участников"
                                     placeholder="10"
                                     value={formData.max_members}
                                     onChange={handleNumberChange('max_members')}
@@ -306,11 +298,12 @@ const CreateGroupPage = () => {
 
                             <Button
                                 type="submit"
-                                disabled={loading}
-                                className={`w-full py-4 text-lg text-white bg-[#323FF0] hover:bg-[#2a35cc] rounded-lg mt-6 ${loading ? 'opacity-50 cursor-not-allowed' : ''
-                                    }`}
+                                disabled={loading || loadingEvents}
+                                className={`w-full py-4 text-lg text-white bg-[#323FF0] hover:bg-[#2a35cc] rounded-lg mt-6 ${
+                                    loading || loadingEvents ? 'opacity-50 cursor-not-allowed' : ''
+                                }`}
                             >
-                                {loading ? 'Создание...' : 'Создать группу'}
+                                {loading ? 'Создание...' : loadingEvents ? 'Загрузка событий...' : 'Создать группу'}
                             </Button>
 
                             <p className="text-sm text-gray-500 mt-4">

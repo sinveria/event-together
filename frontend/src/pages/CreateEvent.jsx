@@ -18,7 +18,7 @@ const CreateEvent = () => {
         location: '',
         price: 0,
         max_participants: 10,
-        category_id: ''  // Добавьте это поле
+        category_id: ''
     });
 
     const [categories, setCategories] = useState([]);
@@ -27,7 +27,6 @@ const CreateEvent = () => {
     const [loading, setLoading] = useState(false);
     const [successMessage, setSuccessMessage] = useState('');
 
-    // Загружаем категории
     useEffect(() => {
         const loadCategories = async () => {
             try {
@@ -68,6 +67,9 @@ const CreateEvent = () => {
             ...prev,
             category_id: value
         }));
+        if (errors.category_id) {
+            setErrors(prev => ({ ...prev, category_id: '' }));
+        }
     };
 
     const validateForm = () => {
@@ -116,7 +118,7 @@ const CreateEvent = () => {
                 date: new Date(formData.date).toISOString(),
                 price: parseFloat(formData.price) || 0,
                 max_participants: parseInt(formData.max_participants) || 10,
-                category_id: formData.category_id || null  // Преобразуем пустую строку в null
+                category_id: formData.category_id || null
             };
 
             const response = await eventsAPI.createEvent(eventData);
@@ -124,7 +126,6 @@ const CreateEvent = () => {
             if (response.status === 201 || response.status === 200) {
                 setSuccessMessage('Событие успешно создано!');
 
-                // Сбрасываем форму
                 setFormData({
                     title: '',
                     description: '',
@@ -202,7 +203,7 @@ const CreateEvent = () => {
                         <form onSubmit={handleSubmit} className="bg-white p-8 rounded-lg relative">
                             <div className="relative mb-4">
                                 <FormInput
-                                    label="Название события *"
+                                    label="Название события"
                                     placeholder="Введите название события"
                                     value={formData.title}
                                     onChange={handleInputChange('title')}
@@ -224,7 +225,7 @@ const CreateEvent = () => {
                             </div>
 
                             <FormInput
-                                label="Описание *"
+                                label="Описание"
                                 placeholder="Опишите ваше событие"
                                 value={formData.description}
                                 onChange={handleInputChange('description')}
@@ -236,7 +237,7 @@ const CreateEvent = () => {
 
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
                                 <FormInput
-                                    label="Дата и время *"
+                                    label="Дата и время"
                                     placeholder=""
                                     value={formData.date}
                                     onChange={handleInputChange('date')}
@@ -246,7 +247,7 @@ const CreateEvent = () => {
                                 />
 
                                 <FormInput
-                                    label="Местоположение *"
+                                    label="Местоположение"
                                     placeholder="Где будет проходить событие?"
                                     value={formData.location}
                                     onChange={handleInputChange('location')}
@@ -268,7 +269,7 @@ const CreateEvent = () => {
                                 />
 
                                 <FormInput
-                                    label="Максимум участников *"
+                                    label="Максимум участников"
                                     placeholder="10"
                                     value={formData.max_participants}
                                     onChange={handleNumberChange('max_participants')}
@@ -280,38 +281,26 @@ const CreateEvent = () => {
                                 />
                             </div>
 
-                            {/* Добавьте поле выбора категории */}
-                            <div className="mb-6">
-                                <label className="block text-sm font-medium text-gray-700 mb-2">
-                                    Категория (необязательно)
-                                </label>
-                                <select
-                                    value={formData.category_id || ''}
-                                    onChange={handleCategoryChange}
-                                    className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[#327BF0]"
-                                    disabled={loadingCategories}
-                                >
-                                    <option value="">Выберите категорию...</option>
-                                    {loadingCategories ? (
-                                        <option disabled>Загрузка категорий...</option>
-                                    ) : (
-                                        categories.map(category => (
-                                            <option key={category.id} value={category.id}>
-                                                {category.name}
-                                            </option>
-                                        ))
-                                    )}
-                                </select>
-                                {errors.category_id && (
-                                    <p className="mt-1 text-sm text-red-600">{errors.category_id}</p>
-                                )}
-                            </div>
+                            <FormInput
+                                label="Категория (необязательно)"
+                                placeholder="Выберите категорию..."
+                                value={formData.category_id || ''}
+                                onChange={handleCategoryChange}
+                                isSelect={true}
+                                options={categories.map(category => ({
+                                    id: category.id,
+                                    name: category.name
+                                }))}
+                                error={errors.category_id}
+                                disabled={loadingCategories}
+                            />
 
                             <Button
                                 type="submit"
                                 disabled={loading}
-                                className={`w-full py-4 text-lg text-white bg-[#323FF0] hover:bg-[#2a35cc] rounded-lg mt-6 ${loading ? 'opacity-50 cursor-not-allowed' : ''
-                                    }`}
+                                className={`w-full py-4 text-lg text-white bg-[#323FF0] hover:bg-[#2a35cc] rounded-lg mt-6 ${
+                                    loading ? 'opacity-50 cursor-not-allowed' : ''
+                                }`}
                             >
                                 {loading ? 'Создание...' : 'Создать событие'}
                             </Button>
