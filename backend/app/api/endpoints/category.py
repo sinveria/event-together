@@ -1,11 +1,11 @@
 from typing import List
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
-from backend.app.api.core.db import get_db
-from backend.app.api.models.category import Category
-from backend.app.api.models.user import User
-from backend.app.api.schemas.category import CategoryCreate, CategoryUpdate, CategoryResponse
-from backend.app.api.core.security import check_admin_or_moderator
+from app.api.core.db import get_db
+from app.api.models.category import Category
+from app.api.models.user import User
+from app.api.schemas.category import CategoryCreate, CategoryUpdate, CategoryResponse
+from app.api.core.security import check_admin_or_moderator
 
 router = APIRouter()
 

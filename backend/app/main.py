@@ -1,7 +1,7 @@
 from fastapi import FastAPI
-from backend.app.api.core.db import engine, Base
-from backend.app.api.models import user, event, group, chat, attendance
-from backend.app.api.endpoints import auth, events, groups, chat as chat_endpoints, attendance as attendance_endpoints, users, admin, category
+from app.api.core.db import engine, Base
+from app.api.models import user, event, group, chat, attendance
+from app.api.endpoints import auth, events, groups, chat as chat_endpoints, attendance as attendance_endpoints, users, admin, category
 from fastapi.middleware.cors import CORSMiddleware
 
 Base.metadata.create_all(bind=engine)

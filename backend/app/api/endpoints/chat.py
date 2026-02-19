@@ -1,12 +1,12 @@
 from typing import List
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
-from backend.app.api.core.db import get_db
-from backend.app.api.models.chat import ChatMessage
-from backend.app.api.models.group import Group
-from backend.app.api.models.user import User
-from backend.app.api.schemas.chat import ChatMessage as ChatMessageSchema, ChatMessageCreate
-from backend.app.api.core.security import get_current_user
+from app.api.core.db import get_db
+from app.api.models.chat import ChatMessage
+from app.api.models.group import Group
+from app.api.models.user import User
+from app.api.schemas.chat import ChatMessage as ChatMessageSchema, ChatMessageCreate
+from app.api.core.security import get_current_user
 
 router = APIRouter()
 

@@ -2,14 +2,14 @@ from typing import List, Optional
 from fastapi import APIRouter, Depends, HTTPException, status, Query
 from sqlalchemy.orm import Session, joinedload, selectinload
 from sqlalchemy import or_
-from backend.app.api.core.db import get_db
-from backend.app.api.models.user import User
-from backend.app.api.models.event import Event
-from backend.app.api.models.group import Group
-from backend.app.api.schemas.group import GroupCatalog, GroupUpdate
-from backend.app.api.schemas.user import UserResponse, UserUpdate
-from backend.app.api.schemas.event import EventResponse, EventUpdate
-from backend.app.api.core.security import get_current_admin, get_current_moderator, check_admin_or_moderator
+from app.api.core.db import get_db
+from app.api.models.user import User
+from app.api.models.event import Event
+from app.api.models.group import Group
+from app.api.schemas.group import GroupCatalog, GroupUpdate
+from app.api.schemas.user import UserResponse, UserUpdate
+from app.api.schemas.event import EventResponse, EventUpdate
+from app.api.core.security import get_current_admin, get_current_moderator, check_admin_or_moderator
 
 router = APIRouter()
 

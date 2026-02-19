@@ -1,7 +1,7 @@
 from sqlalchemy import Column, Integer, String, DateTime
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
-from backend.app.api.core.db import Base
+from app.api.core.db import Base
 
 class Category(Base):
     __tablename__ = "categories"

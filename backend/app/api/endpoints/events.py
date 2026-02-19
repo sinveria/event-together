@@ -1,13 +1,12 @@
-# backend/app/api/routers/event.py
 from typing import List, Optional
 from fastapi import APIRouter, Depends, HTTPException, status, Query
 from sqlalchemy.orm import Session, joinedload
-from backend.app.api.core.db import get_db
-from backend.app.api.models.event import Event
-from backend.app.api.models.user import User
-from backend.app.api.models.category import Category
-from backend.app.api.schemas.event import Catalog, EventResponse, EventCreate, EventUpdate
-from backend.app.api.core.security import get_current_user
+from app.api.core.db import get_db
+from app.api.models.event import Event
+from app.api.models.user import User
+from app.api.models.category import Category
+from app.api.schemas.event import Catalog, EventResponse, EventCreate, EventUpdate
+from app.api.core.security import get_current_user
 
 router = APIRouter()
 

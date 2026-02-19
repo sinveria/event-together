@@ -1,7 +1,7 @@
 from sqlalchemy import Column, Integer, String, DateTime, Table, ForeignKey, Boolean, Enum
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
-from backend.app.api.core.db import Base
+from app.api.core.db import Base
 
 user_interests = Table(
     'user_interests',
