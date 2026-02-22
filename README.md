@@ -18,7 +18,7 @@
     alembic upgrade head
 
     Запуск сервера:
-    uvicorn backend.app.api.main:app --reload
+    uvicorn app.main:app --reload
     Сервер будет доступен по адресу: http://localhost:8000
 
 Фронтенд (Frontend)
