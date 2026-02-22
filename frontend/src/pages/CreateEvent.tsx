@@ -1,31 +1,52 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, ChangeEvent, FormEvent } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import Button from '../components/Button';
 import FormInput from '../components/FormInput';
 import createeventleft from '../assets/img/createeventleft.png';
 import createeventright from '../assets/img/createeventright.png';
-import { eventsAPI, categoriesAPI } from '../services/api';
+import { eventsAPI, categoriesAPI, Category } from '../services/api';
+
+interface EventFormData {
+    title: string;
+    description: string;
+    date: string;
+    location: string;
+    price: number;
+    max_participants: number;
+    category_id: number | null;
+}
+
+interface FormErrors {
+    title?: string;
+    description?: string;
+    date?: string;
+    location?: string;
+    price?: string;
+    max_participants?: string;
+    category_id?: string;
+    submit?: string;
+}
 
 const CreateEvent = () => {
     const navigate = useNavigate();
     const { user } = useAuth();
 
-    const [formData, setFormData] = useState({
+    const [formData, setFormData] = useState<EventFormData>({
         title: '',
         description: '',
         date: '',
         location: '',
         price: 0,
         max_participants: 10,
-        category_id: ''
+        category_id: null
     });
 
-    const [categories, setCategories] = useState([]);
-    const [loadingCategories, setLoadingCategories] = useState(false);
-    const [errors, setErrors] = useState({});
-    const [loading, setLoading] = useState(false);
-    const [successMessage, setSuccessMessage] = useState('');
+    const [categories, setCategories] = useState<Category[]>([]);
+    const [loadingCategories, setLoadingCategories] = useState<boolean>(false);
+    const [errors, setErrors] = useState<FormErrors>({});
+    const [loading, setLoading] = useState<boolean>(false);
+    const [successMessage, setSuccessMessage] = useState<string>('');
 
     useEffect(() => {
         const loadCategories = async () => {
@@ -43,7 +64,7 @@ const CreateEvent = () => {
         loadCategories();
     }, []);
 
-    const handleInputChange = (field) => (e) => {
+    const handleInputChange = (field: keyof EventFormData) => (e: ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
         setFormData(prev => ({
             ...prev,
             [field]: e.target.value
@@ -53,7 +74,9 @@ const CreateEvent = () => {
         }
     };
 
-    const handleNumberChange = (field) => (e) => {
+    const handleNumberChange = (field: keyof EventFormData) => (
+        e: ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>
+    ) => {
         const value = parseFloat(e.target.value) || 0;
         setFormData(prev => ({
             ...prev,
@@ -61,7 +84,7 @@ const CreateEvent = () => {
         }));
     };
 
-    const handleCategoryChange = (e) => {
+    const handleCategoryChange = (e: ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
         const value = e.target.value === '' ? null : parseInt(e.target.value);
         setFormData(prev => ({
             ...prev,
@@ -72,8 +95,8 @@ const CreateEvent = () => {
         }
     };
 
-    const validateForm = () => {
-        const newErrors = {};
+    const validateForm = (): FormErrors => {
+        const newErrors: FormErrors = {};
 
         if (!formData.title.trim()) newErrors.title = 'Введите название события';
         if (!formData.description.trim()) newErrors.description = 'Введите описание';
@@ -93,7 +116,7 @@ const CreateEvent = () => {
         return newErrors;
     };
 
-    const handleSubmit = async (e) => {
+    const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
         e.preventDefault();
 
         if (!user) {
@@ -116,8 +139,8 @@ const CreateEvent = () => {
             const eventData = {
                 ...formData,
                 date: new Date(formData.date).toISOString(),
-                price: parseFloat(formData.price) || 0,
-                max_participants: parseInt(formData.max_participants) || 10,
+                price: parseFloat(formData.price.toString()) || 0,
+                max_participants: parseInt(formData.max_participants.toString()) || 10,
                 category_id: formData.category_id || null
             };
 
@@ -133,7 +156,7 @@ const CreateEvent = () => {
                     location: '',
                     price: 0,
                     max_participants: 10,
-                    category_id: ''
+                    category_id: null
                 });
 
                 setTimeout(() => {
@@ -143,11 +166,13 @@ const CreateEvent = () => {
         } catch (error) {
             console.error('Ошибка при создании события:', error);
 
-            if (error.response?.status === 401) {
+            const axiosError = error as { response?: { status?: number; data?: { detail?: string } } };
+
+            if (axiosError.response?.status === 401) {
                 alert('Сессия истекла. Пожалуйста, войдите снова.');
                 navigate('/login');
-            } else if (error.response?.data?.detail) {
-                setErrors({ submit: error.response.data.detail });
+            } else if (axiosError.response?.data?.detail) {
+                setErrors({ submit: axiosError.response.data.detail });
             } else {
                 setErrors({ submit: 'Ошибка при создании события. Попробуйте еще раз.' });
             }
@@ -230,7 +255,6 @@ const CreateEvent = () => {
                                 value={formData.description}
                                 onChange={handleInputChange('description')}
                                 isTextarea={true}
-                                rows="4"
                                 error={errors.description}
                                 required
                             />
@@ -260,7 +284,7 @@ const CreateEvent = () => {
                                 <FormInput
                                     label="Цена (₽)"
                                     placeholder="0.00"
-                                    value={formData.price}
+                                    value={formData.price.toString()}
                                     onChange={handleNumberChange('price')}
                                     type="number"
                                     min="0"
@@ -271,7 +295,7 @@ const CreateEvent = () => {
                                 <FormInput
                                     label="Максимум участников"
                                     placeholder="10"
-                                    value={formData.max_participants}
+                                    value={formData.max_participants.toString()}
                                     onChange={handleNumberChange('max_participants')}
                                     type="number"
                                     min="1"
@@ -284,11 +308,12 @@ const CreateEvent = () => {
                             <FormInput
                                 label="Категория (необязательно)"
                                 placeholder="Выберите категорию..."
-                                value={formData.category_id || ''}
+                                value={formData.category_id?.toString() || ''}
                                 onChange={handleCategoryChange}
                                 isSelect={true}
-                                options={categories.map(category => ({
+                                options={categories.map((category: Category) => ({
                                     id: category.id,
+                                    value: category.id.toString(),
                                     name: category.name
                                 }))}
                                 error={errors.category_id}
@@ -298,9 +323,8 @@ const CreateEvent = () => {
                             <Button
                                 type="submit"
                                 disabled={loading}
-                                className={`w-full py-4 text-lg text-white bg-[#323FF0] hover:bg-[#2a35cc] rounded-lg mt-6 ${
-                                    loading ? 'opacity-50 cursor-not-allowed' : ''
-                                }`}
+                                className={`w-full py-4 text-lg text-white bg-[#323FF0] hover:bg-[#2a35cc] rounded-lg mt-6 ${loading ? 'opacity-50 cursor-not-allowed' : ''
+                                    }`}
                             >
                                 {loading ? 'Создание...' : 'Создать событие'}
                             </Button>

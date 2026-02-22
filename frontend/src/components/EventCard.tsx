@@ -1,14 +1,18 @@
-// components/EventCard.jsx
-import React, { useState } from 'react';
+import React, { useState, MouseEvent } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useNavigate } from 'react-router-dom';
+import { Event } from '../services/api';
 
-const EventCard = ({ event }) => {
-  const [isExpanded, setIsExpanded] = useState(false);
+interface EventCardProps {
+  event: Event;
+}
+
+const EventCard: React.FC<EventCardProps> = ({ event }) => {
+  const [isExpanded, setIsExpanded] = useState<boolean>(false);
   const { user, isAuthenticated } = useAuth();
   const navigate = useNavigate();
 
-  const handleJoinClick = (e) => {
+  const handleJoinClick = (e: MouseEvent<HTMLButtonElement>): void => {
     e.stopPropagation();
     
     if (!isAuthenticated) {
