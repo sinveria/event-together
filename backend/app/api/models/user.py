@@ -2,6 +2,13 @@ from sqlalchemy import Column, Integer, String, DateTime, Table, ForeignKey, Boo
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
 from app.api.core.db import Base
+import enum
+
+class UserRole(str, enum.Enum):
+    GUEST = "guest"
+    USER = "user"
+    MODERATOR = "moderator"
+    ADMIN = "admin"
 
 user_interests = Table(
     'user_interests',
@@ -20,6 +27,7 @@ class User(Base):
     hashed_password = Column(String(255), nullable=False)
     avatar_url = Column(String(500), nullable=True)
     role = Column(String(20), default="user", nullable=False)
+    
     is_active = Column(Boolean, default=True, nullable=False)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
 

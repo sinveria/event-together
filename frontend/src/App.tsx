@@ -1,18 +1,20 @@
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import { AuthProvider } from './context/AuthContext';
-import Header from './components/Header';
-import Footer from './components/Footer';
+import PrivateRoute from './components/PrivateRoute';
+
 import Home from './pages/Home';
-import Events from './pages/Events';
-import CreateEvent from './pages/CreateEvent';
 import Login from './pages/Login';
 import Register from './pages/Register';
-import ForgotPassword from './pages/ForgotPassword';
+import Events from './pages/Events';
+import CreateEvent from './pages/CreateEvent';
 import Groups from './pages/Groups';
+import CreateGroup from './pages/CreateGroup';
 import Profile from './pages/Profile';
-import SuccessNotification from './components/SuccessNotification';
 import Admin from './pages/Admin';
-import CreateGroupPage from './pages/CreateGroup'
+import ForgotPassword from './pages/ForgotPassword';
+import SuccessNotification from './components/SuccessNotification';
+import Header from './components/Header';
+import Footer from './components/Footer';
 
 function App() {
   return (
@@ -23,16 +25,46 @@ function App() {
           <main className="flex-grow">
             <Routes>
               <Route path="/" element={<Home />} />
-              <Route path="/events" element={<Events />} />
-              <Route path="/create-event" element={<CreateEvent />} />
               <Route path="/login" element={<Login />} />
               <Route path="/register" element={<Register />} />
               <Route path="/forgot-password" element={<ForgotPassword />} />
-              <Route path="/groups" element={<Groups />} />
-              <Route path="/profile" element={<Profile />} />
               <Route path="/success" element={<SuccessNotification />} />
-              <Route path="/admin" element={<Admin />} />
-              <Route path="/create-group" element={<CreateGroupPage />} />
+              <Route path="/events" element={<Events />} />
+              <Route path="/groups" element={<Groups />} />
+
+              <Route 
+                path="/create-event" 
+                element={
+                  <PrivateRoute requireAuth={true}>
+                    <CreateEvent />
+                  </PrivateRoute>
+                } 
+              />
+              <Route 
+                path="/create-group" 
+                element={
+                  <PrivateRoute requireAuth={true}>
+                    <CreateGroup />
+                  </PrivateRoute>
+                } 
+              />
+              <Route 
+                path="/profile" 
+                element={
+                  <PrivateRoute requireAuth={true}>
+                    <Profile />
+                  </PrivateRoute>
+                } 
+              />
+
+              <Route 
+                path="/admin" 
+                element={
+                  <PrivateRoute allowedRoles={['moderator', 'admin']}>
+                    <Admin />
+                  </PrivateRoute>
+                } 
+              />
             </Routes>
           </main>
           <Footer />

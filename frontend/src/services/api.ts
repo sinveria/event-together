@@ -1,9 +1,12 @@
 import axios, { AxiosInstance, AxiosResponse, AxiosError } from 'axios';
 
+export type UserRole = 'guest' | 'user' | 'moderator' | 'admin';
+
 export interface User {
   id: number;
   email: string;
   username?: string;
+  role: UserRole;
   first_name?: string;
   last_name?: string;
   is_active?: boolean;
@@ -168,6 +171,9 @@ export const adminAPI = {
   updateUser: (id: number | string, userData: Record<string, any>): Promise<AxiosResponse<any>> => api.put(`/admin/users/${id}`, userData),
   deleteUser: (id: number | string): Promise<AxiosResponse<void>> => api.delete(`/admin/users/${id}`),
   toggleUserActive: (id: number | string): Promise<AxiosResponse<any>> => api.post(`/admin/users/${id}/toggle-active`),
+
+  updateUserRole: (userId: number, role: UserRole): Promise<AxiosResponse<any>> =>
+    api.patch(`/admin/users/${userId}/role`, null, { params: { new_role: role } }),
 
   getEvents: (): Promise<AxiosResponse<any>> => api.get('/admin/events'),
   updateEvent: (id: number | string, eventData: Record<string, any>): Promise<AxiosResponse<any>> => api.put(`/admin/events/${id}`, eventData),

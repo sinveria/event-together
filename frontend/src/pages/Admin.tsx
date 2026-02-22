@@ -2,7 +2,7 @@ import { useState, useEffect, useMemo } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import FormInput from '../components/FormInput';
-import { adminAPI, User, Event, Group } from '../services/api';
+import { adminAPI, User, Event, Group, UserRole } from '../services/api';
 import AdminCategories from '../components/AdminCategories';
 
 type ActiveTab = 'users' | 'events' | 'groups' | 'categories';
@@ -103,6 +103,15 @@ const Admin = () => {
       loadData();
     } catch (error) {
       alert('Ошибка удаления пользователя');
+    }
+  };
+
+  const handleUpdateUserRole = async (userId: number, newRole: UserRole): Promise<void> => {
+    try {
+      await adminAPI.updateUserRole(userId, newRole);
+      loadData();
+    } catch (error) {
+      alert('Ошибка изменения роли');
     }
   };
 
@@ -232,7 +241,6 @@ const Admin = () => {
                         <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Email</th>
                         <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Роль</th>
                         <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Статус</th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Дата регистрации</th>
                         <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Действия</th>
                       </tr>
                     </thead>
@@ -244,14 +252,16 @@ const Admin = () => {
                             <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{user.name}</td>
                             <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{user.email}</td>
                             <td className="px-6 py-4 whitespace-nowrap">
-                              <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
-                                user.role === 'admin' ? 'bg-red-100 text-red-800' :
-                                user.role === 'moderator' ? 'bg-blue-100 text-blue-800' :
-                                'bg-green-100 text-green-800'
-                              }`}>
-                                {user.role === 'admin' ? 'Админ' :
-                                 user.role === 'moderator' ? 'Модератор' : 'Пользователь'}
-                              </span>
+                              <select
+                                value={user.role}
+                                onChange={(e) => handleUpdateUserRole(user.id, e.target.value as UserRole)}
+                                className="border border-gray-300 rounded px-2 py-1 text-sm"
+                                disabled={user.role === 'admin'}
+                              >
+                                <option value="user">User</option>
+                                <option value="moderator">Moderator</option>
+                                <option value="admin">Admin</option>
+                              </select>
                             </td>
                             <td className="px-6 py-4 whitespace-nowrap">
                               <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
@@ -260,16 +270,7 @@ const Admin = () => {
                                 {user.is_active ? 'Активен' : 'Неактивен'}
                               </span>
                             </td>
-                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                              {user.created_at ? new Date(user.created_at).toLocaleDateString('ru-RU') : '—'}
-                            </td>
                             <td className="px-6 py-4 whitespace-nowrap text-sm font-medium space-x-2">
-                              <button
-                                onClick={() => setEditingUser(user)}
-                                className="text-blue-600 hover:text-blue-900"
-                              >
-                                Изменить
-                              </button>
                               <button
                                 onClick={() => handleToggleUserActive(user.id)}
                                 className="text-yellow-600 hover:text-yellow-900"
@@ -289,7 +290,7 @@ const Admin = () => {
                         ))
                       ) : (
                         <tr>
-                          <td colSpan={7} className="px-6 py-4 text-center text-gray-500">
+                          <td colSpan={6} className="px-6 py-4 text-center text-gray-500">
                             Пользователи не найдены
                           </td>
                         </tr>

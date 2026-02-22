@@ -1,4 +1,3 @@
-// src/pages/Events.tsx
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import Button from '../components/Button';
@@ -9,8 +8,9 @@ import arrowone from '../assets/img/arrowone.png';
 import arrowtwo from '../assets/img/arrowtwo.png';
 import question from '../assets/img/question.png';
 import { eventsAPI, Event as ApiEvent } from '../services/api';
+import { useAuth } from '../context/AuthContext';
+import { canCreateEvent } from '../utils/permissions';
 
-// Тип для отформатированного события (для EventCard)
 interface FormattedEvent {
   id: number;
   title: string;
@@ -26,6 +26,8 @@ interface FormattedEvent {
 }
 
 const Events = () => {
+  const { user } = useAuth();
+  
   const [searchTerm, setSearchTerm] = useState<string>('');
   const [activeFilter, setActiveFilter] = useState<string | number>('all');
   const [events, setEvents] = useState<ApiEvent[]>([]);
@@ -124,13 +126,23 @@ const Events = () => {
               />
             </div>
 
-            <Button
-              as={Link}
-              to="/create-event"
-              className="px-8 py-4 text-lg text-white bg-[#323FF0] hover:bg-[#2a35cc] rounded-full"
-            >
-              Создать событие
-            </Button>
+            {canCreateEvent(user?.role) ? (
+              <Button
+                as={Link}
+                to="/create-event"
+                className="px-8 py-4 text-lg text-white bg-[#323FF0] hover:bg-[#2a35cc] rounded-full"
+              >
+                Создать событие
+              </Button>
+            ) : (
+              <Button
+                as={Link}
+                to="/login"
+                className="px-8 py-4 text-lg text-gray-700 bg-gray-200 hover:bg-gray-300 rounded-full"
+              >
+                Войдите для создания
+              </Button>
+            )}
           </div>
         </div>
       </section>
