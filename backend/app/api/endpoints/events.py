@@ -7,6 +7,7 @@ from app.api.models.user import User
 from app.api.models.category import Category
 from app.api.schemas.event import Catalog, EventResponse, EventCreate, EventUpdate
 from app.api.core.security import get_current_user
+from app.api.dependencies import get_current_active_user, check_event_ownership
 
 router = APIRouter()
 
@@ -19,13 +20,10 @@ async def get_events_catalog(
     db: Session = Depends(get_db)
 ):
     query = db.query(Event).join(User, Event.organizer_id == User.id).options(joinedload(Event.organizer))
-    
     if search:
         query = query.filter(Event.title.ilike(f"%{search}%"))
-    
     if category_id:
         query = query.filter(Event.category_id == category_id)
-    
     events = query.offset(skip).limit(limit).all()
     
     catalog_events = []
@@ -41,14 +39,13 @@ async def get_events_catalog(
             "max_participants": event.max_participants,
             "category_id": event.category_id
         })
-    
     return catalog_events
 
 @router.post("/", response_model=EventResponse)
 async def create_event(
     event_data: EventCreate,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user)
+    current_user: User = Depends(get_current_active_user)
 ):
     if event_data.category_id:
         category = db.query(Category).filter(Category.id == event_data.category_id).first()
@@ -65,7 +62,6 @@ async def create_event(
         organizer_id=current_user.id,
         category_id=event_data.category_id
     )
-    
     db.add(db_event)
     db.commit()
     db.refresh(db_event)
@@ -74,7 +70,7 @@ async def create_event(
     if db_event.category_id:
         category = db.query(Category).filter(Category.id == db_event.category_id).first()
         category_name = category.name if category else None
-
+    
     db.refresh(db_event, ['organizer'])
     
     return {
@@ -98,9 +94,8 @@ async def get_event(event_id: int, db: Session = Depends(get_db)):
     event = db.query(Event).options(joinedload(Event.organizer)).filter(Event.id == event_id).first()
     if not event:
         raise HTTPException(status_code=404, detail="Event not found")
-
-    current_participants = len(event.attendance_records) if event.attendance_records else 0
     
+    current_participants = len(event.attendance_records) if event.attendance_records else 0
     category_name = None
     if event.category_id:
         category = db.query(Category).filter(Category.id == event.category_id).first()
@@ -121,3 +116,36 @@ async def get_event(event_id: int, db: Session = Depends(get_db)):
         "current_participants": current_participants,
         "created_at": event.created_at
     }
+
+@router.put("/{event_id}", response_model=EventResponse)
+async def update_event(
+    event_id: int,
+    event_data: EventUpdate,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(check_event_ownership)
+):
+    event = db.query(Event).filter(Event.id == event_id).first()
+    if not event:
+        raise HTTPException(status_code=404, detail="Event not found")
+    
+    update_data = event_data.dict(exclude_unset=True)
+    for field, value in update_data.items():
+        setattr(event, field, value)
+    
+    db.commit()
+    db.refresh(event)
+    return event
+
+@router.delete("/{event_id}")
+async def delete_event(
+    event_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(check_event_ownership)
+):
+    event = db.query(Event).filter(Event.id == event_id).first()
+    if not event:
+        raise HTTPException(status_code=404, detail="Event not found")
+    
+    db.delete(event)
+    db.commit()
+    return {"message": f"Event {event_id} deleted successfully"}

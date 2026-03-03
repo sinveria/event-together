@@ -1,5 +1,6 @@
-import { Link, useLocation, useNavigate  } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import { canAccessAdminPanel } from '../utils/permissions';
 
 const Header = () => {
   const { user, logout, isAuthenticated } = useAuth();
@@ -41,6 +42,11 @@ const Header = () => {
                   <path fillRule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clipRule="evenodd" />
                 </svg>
               </div>
+              {canAccessAdminPanel(user?.role) && (
+                <Link to="/admin" className="text-red-600 hover:text-red-800 font-medium">
+                  Админ-панель
+                </Link>
+              )}
             </>
           ) : (
             <Link to="/login" className="text-black hover:text-gray-600">Авторизация</Link>

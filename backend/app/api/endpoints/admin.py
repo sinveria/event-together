@@ -1,3 +1,4 @@
+# backend/app/routes/admin.py
 from typing import List, Optional
 from fastapi import APIRouter, Depends, HTTPException, status, Query
 from sqlalchemy.orm import Session, joinedload, selectinload
@@ -9,7 +10,7 @@ from app.api.models.group import Group
 from app.api.schemas.group import GroupCatalog, GroupUpdate
 from app.api.schemas.user import UserResponse, UserUpdate
 from app.api.schemas.event import EventResponse, EventUpdate
-from app.api.core.security import get_current_admin, get_current_moderator, check_admin_or_moderator
+from app.api.dependencies import get_current_admin, get_current_moderator, check_admin_or_moderator
 
 router = APIRouter()
 
@@ -22,7 +23,6 @@ async def get_all_users(
     admin: User = Depends(get_current_admin)
 ):
     query = db.query(User)
-    
     if search:
         query = query.filter(
             or_(
@@ -30,7 +30,6 @@ async def get_all_users(
                 User.email.ilike(f"%{search}%")
             )
         )
-    
     users = query.offset(skip).limit(limit).all()
     return users
 
@@ -73,7 +72,6 @@ async def delete_user(
     user = db.query(User).filter(User.id == user_id).first()
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
-    
     if user.role == "admin":
         raise HTTPException(status_code=400, detail="Cannot delete admin user")
     
@@ -90,13 +88,42 @@ async def toggle_user_active(
     user = db.query(User).filter(User.id == user_id).first()
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
-    
     if user.role == "admin":
         raise HTTPException(status_code=400, detail="Cannot deactivate admin user")
     
     user.is_active = not user.is_active
     db.commit()
     return {"message": f"User {user_id} {'activated' if user.is_active else 'deactivated'}"}
+
+@router.patch("/users/{user_id}/role")
+async def update_user_role(
+    user_id: int,
+    new_role: str,
+    db: Session = Depends(get_db),
+    admin: User = Depends(get_current_admin)
+):
+    """Изменить роль пользователя"""
+    if new_role not in ["user", "moderator", "admin"]:
+        raise HTTPException(status_code=400, detail="Invalid role")
+    
+    user = db.query(User).filter(User.id == user_id).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+
+    if user.role == "admin" and new_role != "admin":
+        admin_count = db.query(User).filter(User.role == "admin").count()
+        if admin_count <= 1:
+            raise HTTPException(status_code=400, detail="Cannot remove the last admin")
+    
+    user.role = new_role
+    db.commit()
+    db.refresh(user)
+    
+    return {
+        "id": user.id,
+        "email": user.email,
+        "role": user.role
+    }
 
 @router.get("/events", response_model=List[EventResponse])
 async def get_all_events(
@@ -107,10 +134,8 @@ async def get_all_events(
     current_user: User = Depends(check_admin_or_moderator)
 ):
     query = db.query(Event)
-    
     if search:
         query = query.filter(Event.title.ilike(f"%{search}%"))
-    
     events = query.offset(skip).limit(limit).all()
     return events
 
@@ -147,7 +172,6 @@ async def admin_delete_event(
     db.commit()
     return {"message": f"Event {event_id} deleted successfully"}
 
-
 @router.get("/groups", response_model=List[GroupCatalog])
 async def get_all_groups(
     skip: int = 0,
@@ -156,14 +180,10 @@ async def get_all_groups(
     db: Session = Depends(get_db),
     current_user: User = Depends(check_admin_or_moderator)
 ):
-    """
-    Получить все группы (для админов и модераторов)
-    """
     query = db.query(Group).options(
         joinedload(Group.organizer),
         selectinload(Group.members)
     )
-    
     if search:
         query = query.filter(
             or_(
@@ -171,7 +191,6 @@ async def get_all_groups(
                 Group.description.ilike(f"%{search}%")
             )
         )
-    
     groups = query.offset(skip).limit(limit).all()
     
     result = []
@@ -187,7 +206,6 @@ async def get_all_groups(
             "organizer_name": group.organizer_name,
             "created_at": group.created_at
         })
-    
     return result
 
 @router.put("/groups/{group_id}", response_model=GroupCatalog)
@@ -197,14 +215,10 @@ async def admin_update_group(
     db: Session = Depends(get_db),
     current_user: User = Depends(check_admin_or_moderator)
 ):
-    """
-    Обновить группу (для админов и модераторов)
-    """
     group = db.query(Group).options(
         joinedload(Group.organizer),
         selectinload(Group.members)
     ).filter(Group.id == group_id).first()
-    
     if not group:
         raise HTTPException(status_code=404, detail="Group not found")
     
@@ -233,9 +247,6 @@ async def admin_delete_group(
     db: Session = Depends(get_db),
     current_user: User = Depends(check_admin_or_moderator)
 ):
-    """
-    Удалить группу (для админов и модераторов)
-    """
     group = db.query(Group).filter(Group.id == group_id).first()
     if not group:
         raise HTTPException(status_code=404, detail="Group not found")
@@ -250,14 +261,10 @@ async def toggle_group_status(
     db: Session = Depends(get_db),
     current_user: User = Depends(check_admin_or_moderator)
 ):
-    """
-    Переключить статус группы (открытая/закрытая)
-    """
     group = db.query(Group).filter(Group.id == group_id).first()
     if not group:
         raise HTTPException(status_code=404, detail="Group not found")
     
-    # Меняем статус группы
     group.is_open = not group.is_open
     db.commit()
     

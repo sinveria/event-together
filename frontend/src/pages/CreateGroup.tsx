@@ -1,17 +1,34 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, ChangeEvent, FormEvent } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import FormInput from '../components/FormInput';
 import Button from '../components/Button';
 import createeventleft from '../assets/img/createeventleft.png';
 import createeventright from '../assets/img/createeventright.png';
-import { groupsAPI, eventsAPI } from '../services/api';
+import { groupsAPI, eventsAPI, Event } from '../services/api';
+
+interface GroupFormData {
+    name: string;
+    description: string;
+    event_id: string | number;
+    max_members: number;
+    is_open: boolean;
+}
+
+interface FormErrors {
+    name?: string;
+    description?: string;
+    event_id?: string;
+    max_members?: string;
+    is_open?: string;
+    submit?: string;
+}
 
 const CreateGroupPage = () => {
     const navigate = useNavigate();
     const { user, isAuthenticated } = useAuth();
 
-    const [formData, setFormData] = useState({
+    const [formData, setFormData] = useState<GroupFormData>({
         name: '',
         description: '',
         event_id: '',
@@ -19,22 +36,21 @@ const CreateGroupPage = () => {
         is_open: true
     });
 
-    const [errors, setErrors] = useState({});
-    const [loading, setLoading] = useState(false);
-    const [successMessage, setSuccessMessage] = useState('');
-    const [events, setEvents] = useState([]);
-    const [loadingEvents, setLoadingEvents] = useState(true);
+    const [errors, setErrors] = useState<FormErrors>({});
+    const [loading, setLoading] = useState<boolean>(false);
+    const [successMessage, setSuccessMessage] = useState<string>('');
+    const [events, setEvents] = useState<Event[]>([]);
+    const [loadingEvents, setLoadingEvents] = useState<boolean>(true);
 
     useEffect(() => {
         if (!isAuthenticated) {
             navigate('/login');
             return;
         }
-
         loadEvents();
     }, [isAuthenticated, navigate]);
 
-    const loadEvents = async () => {
+    const loadEvents = async (): Promise<void> => {
         try {
             setLoadingEvents(true);
             const eventsResponse = await eventsAPI.getAllEvents();
@@ -47,18 +63,23 @@ const CreateGroupPage = () => {
         }
     };
 
-    const handleInputChange = (field) => (e) => {
-        const { value, type, checked } = e.target;
+    const handleInputChange = (field: keyof GroupFormData) => (
+        e: ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>
+    ) => {
+        const { value, type, checked } = e.target as HTMLInputElement;
         setFormData(prev => ({
             ...prev,
             [field]: type === 'checkbox' ? checked : value
         }));
-        if (errors[field]) {
+
+        if (field !== 'is_open' && errors[field as keyof FormErrors]) {
             setErrors(prev => ({ ...prev, [field]: '' }));
         }
     };
 
-    const handleNumberChange = (field) => (e) => {
+    const handleNumberChange = (field: keyof GroupFormData) => (
+        e: ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>
+    ) => {
         const value = parseInt(e.target.value) || 0;
         setFormData(prev => ({
             ...prev,
@@ -66,7 +87,9 @@ const CreateGroupPage = () => {
         }));
     };
 
-    const handleSelectChange = (e) => {
+    const handleSelectChange = (
+        e: ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>
+    ) => {
         const value = e.target.value;
         setFormData(prev => ({
             ...prev,
@@ -77,19 +100,19 @@ const CreateGroupPage = () => {
         }
     };
 
-    const validateForm = () => {
-        const newErrors = {};
+    const validateForm = (): FormErrors => {
+        const newErrors: FormErrors = {};
 
         if (!formData.name.trim()) {
             newErrors.name = 'Введите название группы';
         } else if (formData.name.length < 3) {
             newErrors.name = 'Название должно быть не менее 3 символов';
         }
-        
+
         if (!formData.event_id) {
             newErrors.event_id = 'Выберите событие';
         }
-        
+
         if (formData.max_members < 2) {
             newErrors.max_members = 'Минимальное количество участников - 2';
         } else if (formData.max_members > 100) {
@@ -99,7 +122,7 @@ const CreateGroupPage = () => {
         return newErrors;
     };
 
-    const handleSubmit = async (e) => {
+    const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
         e.preventDefault();
 
         if (!isAuthenticated) {
@@ -120,8 +143,8 @@ const CreateGroupPage = () => {
         try {
             const groupData = {
                 ...formData,
-                event_id: parseInt(formData.event_id),
-                max_members: parseInt(formData.max_members)
+                event_id: parseInt(formData.event_id.toString()),
+                max_members: parseInt(formData.max_members.toString())
             };
 
             const response = await groupsAPI.createGroup(groupData);
@@ -144,10 +167,12 @@ const CreateGroupPage = () => {
         } catch (error) {
             console.error('Ошибка при создании группы:', error);
 
-            if (error.response?.status === 401) {
+            const axiosError = error as { response?: { status?: number; data?: { detail?: string } } };
+
+            if (axiosError.response?.status === 401) {
                 navigate('/login');
-            } else if (error.response?.data?.detail) {
-                setErrors({ submit: error.response.data.detail });
+            } else if (axiosError.response?.data?.detail) {
+                setErrors({ submit: axiosError.response.data.detail });
             } else {
                 setErrors({ submit: 'Ошибка при создании группы. Попробуйте еще раз.' });
             }
@@ -247,7 +272,6 @@ const CreateGroupPage = () => {
                                 value={formData.description}
                                 onChange={handleInputChange('description')}
                                 isTextarea={true}
-                                rows="4"
                                 error={errors.description}
                             />
 
@@ -255,12 +279,13 @@ const CreateGroupPage = () => {
                                 <FormInput
                                     label="Событие для группы"
                                     placeholder="Выберите событие"
-                                    value={formData.event_id}
+                                    value={formData.event_id.toString()}
                                     onChange={handleSelectChange}
                                     isSelect={true}
-                                    options={events.map(event => ({
+                                    options={events.map((event: Event) => ({
                                         id: event.id,
-                                        name: `${event.title} (${new Date(event.date).toLocaleDateString('ru-RU')})`
+                                        value: event.id.toString(),
+                                        name: `${event.title} (${event.date ? new Date(event.date).toLocaleDateString('ru-RU') : ''})`
                                     }))}
                                     error={errors.event_id}
                                     required
@@ -270,7 +295,7 @@ const CreateGroupPage = () => {
                                 <FormInput
                                     label="Максимум участников"
                                     placeholder="10"
-                                    value={formData.max_members}
+                                    value={formData.max_members.toString()}
                                     onChange={handleNumberChange('max_members')}
                                     type="number"
                                     min="2"
@@ -287,7 +312,9 @@ const CreateGroupPage = () => {
                                         type="checkbox"
                                         id="is_open"
                                         checked={formData.is_open}
-                                        onChange={handleInputChange('is_open')}
+                                        onChange={(e: ChangeEvent<HTMLInputElement>) =>
+                                            handleInputChange('is_open')(e as unknown as ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>)
+                                        }
                                         className="h-5 w-5 text-blue-600 rounded focus:ring-blue-500"
                                     />
                                     <label htmlFor="is_open" className="ml-3 text-sm text-gray-700">
@@ -299,9 +326,8 @@ const CreateGroupPage = () => {
                             <Button
                                 type="submit"
                                 disabled={loading || loadingEvents}
-                                className={`w-full py-4 text-lg text-white bg-[#323FF0] hover:bg-[#2a35cc] rounded-lg mt-6 ${
-                                    loading || loadingEvents ? 'opacity-50 cursor-not-allowed' : ''
-                                }`}
+                                className={`w-full py-4 text-lg text-white bg-[#323FF0] hover:bg-[#2a35cc] rounded-lg mt-6 ${loading || loadingEvents ? 'opacity-50 cursor-not-allowed' : ''
+                                    }`}
                             >
                                 {loading ? 'Создание...' : loadingEvents ? 'Загрузка событий...' : 'Создать группу'}
                             </Button>
