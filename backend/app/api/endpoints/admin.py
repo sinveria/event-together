@@ -1,4 +1,3 @@
-# backend/app/routes/admin.py
 from typing import List, Optional
 from fastapi import APIRouter, Depends, HTTPException, status, Query
 from sqlalchemy.orm import Session, joinedload, selectinload
@@ -10,7 +9,7 @@ from app.api.models.group import Group
 from app.api.schemas.group import GroupCatalog, GroupUpdate
 from app.api.schemas.user import UserResponse, UserUpdate
 from app.api.schemas.event import EventResponse, EventUpdate
-from app.api.dependencies import get_current_admin, get_current_moderator, check_admin_or_moderator
+from app.api.core.security import get_current_admin, get_current_moderator, check_admin_or_moderator
 
 router = APIRouter()
 
@@ -44,6 +43,32 @@ async def get_user(
         raise HTTPException(status_code=404, detail="User not found")
     return user
 
+@router.patch("/users/{user_id}/role", response_model=UserResponse)
+async def update_user_role(
+    user_id: int,
+    new_role: str = Query(..., description="user, moderator or admin"),
+    db: Session = Depends(get_db),
+    admin: User = Depends(get_current_admin)
+):
+    valid_roles = ["user", "moderator", "admin"]
+    if new_role not in valid_roles:
+        raise HTTPException(status_code=400, detail=f"Invalid role. Must be one of: {valid_roles}")
+    
+    user = db.query(User).filter(User.id == user_id).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+
+    if user.role == "admin" and new_role != "admin":
+        admin_count = db.query(User).filter(User.role == "admin").count()
+        if admin_count <= 1:
+            raise HTTPException(status_code=400, detail="Cannot remove the last admin")
+    
+    user.role = new_role
+    db.commit()
+    db.refresh(user)
+    
+    return user
+
 @router.put("/users/{user_id}", response_model=UserResponse)
 async def update_user(
     user_id: int,
@@ -63,6 +88,7 @@ async def update_user(
     db.refresh(user)
     return user
 
+
 @router.delete("/users/{user_id}")
 async def delete_user(
     user_id: int,
@@ -78,6 +104,7 @@ async def delete_user(
     db.delete(user)
     db.commit()
     return {"message": f"User {user_id} deleted successfully"}
+
 
 @router.post("/users/{user_id}/toggle-active")
 async def toggle_user_active(
@@ -95,35 +122,6 @@ async def toggle_user_active(
     db.commit()
     return {"message": f"User {user_id} {'activated' if user.is_active else 'deactivated'}"}
 
-@router.patch("/users/{user_id}/role")
-async def update_user_role(
-    user_id: int,
-    new_role: str,
-    db: Session = Depends(get_db),
-    admin: User = Depends(get_current_admin)
-):
-    """Изменить роль пользователя"""
-    if new_role not in ["user", "moderator", "admin"]:
-        raise HTTPException(status_code=400, detail="Invalid role")
-    
-    user = db.query(User).filter(User.id == user_id).first()
-    if not user:
-        raise HTTPException(status_code=404, detail="User not found")
-
-    if user.role == "admin" and new_role != "admin":
-        admin_count = db.query(User).filter(User.role == "admin").count()
-        if admin_count <= 1:
-            raise HTTPException(status_code=400, detail="Cannot remove the last admin")
-    
-    user.role = new_role
-    db.commit()
-    db.refresh(user)
-    
-    return {
-        "id": user.id,
-        "email": user.email,
-        "role": user.role
-    }
 
 @router.get("/events", response_model=List[EventResponse])
 async def get_all_events(
@@ -171,6 +169,7 @@ async def admin_delete_event(
     db.delete(event)
     db.commit()
     return {"message": f"Event {event_id} deleted successfully"}
+
 
 @router.get("/groups", response_model=List[GroupCatalog])
 async def get_all_groups(

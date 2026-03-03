@@ -27,6 +27,9 @@ class User(Base):
     hashed_password = Column(String(255), nullable=False)
     avatar_url = Column(String(500), nullable=True)
     role = Column(String(20), default="user", nullable=False)
+
+    refresh_token = Column(String(500), nullable=True, index=True) 
+    is_active = Column(Boolean, default=True, nullable=False)
     
     is_active = Column(Boolean, default=True, nullable=False)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
