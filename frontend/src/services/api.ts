@@ -216,8 +216,23 @@ export const userAPI = {
 };
 
 export const eventsAPI = {
-  getAllEvents: (params: Record<string, any> = {}): Promise<AxiosResponse<any>> =>
-    api.get('/events/', { params }),
+  getAllEvents: (params: {
+    skip?: number;
+    limit?: number;
+    search?: string;
+    category_id?: number;
+    sort_by?: 'date' | 'price' | 'title' | 'created_at';
+    order?: 'asc' | 'desc';
+    price_min?: number;
+    price_max?: number;
+    date_from?: string;
+    date_to?: string;
+  } = {}): Promise<AxiosResponse<{
+    items: Event[];
+    total: number;
+    skip: number;
+    limit: number;
+  }>> => api.get('/events/', { params }),
 
   getEvent: (id: number | string): Promise<AxiosResponse<any>> =>
     api.get(`/events/${id}`),

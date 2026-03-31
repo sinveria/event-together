@@ -1,31 +1,62 @@
 from typing import List, Optional
 from fastapi import APIRouter, Depends, HTTPException, status, Query
+from datetime import datetime
+from sqlalchemy import asc, desc
 from sqlalchemy.orm import Session, joinedload
 from app.api.core.db import get_db
 from app.api.models.event import Event
 from app.api.models.user import User
 from app.api.models.category import Category
-from app.api.schemas.event import Catalog, EventResponse, EventCreate, EventUpdate
+from app.api.schemas.event import Catalog, EventResponse, EventCreate, EventUpdate, CatalogResponse
 from app.api.core.security import get_current_user
 from app.api.dependencies import get_current_active_user, check_event_ownership
 
 router = APIRouter()
 
-@router.get("/", response_model=List[Catalog])
+@router.get("/", response_model=CatalogResponse)
 async def get_events_catalog(
-    skip: int = 0,
-    limit: int = 10,
+    skip: int = Query(0, ge=0),
+    limit: int = Query(10, ge=1, le=100),
     search: Optional[str] = Query(None),
     category_id: Optional[int] = Query(None),
+    sort_by: str = Query("date", regex="^(date|price|title|created_at)$"),
+    order: str = Query("asc", regex="^(asc|desc)$"),
+    price_min: Optional[float] = Query(None, ge=0),
+    price_max: Optional[float] = Query(None, ge=0),
+    date_from: Optional[datetime] = Query(None),
+    date_to: Optional[datetime] = Query(None),
     db: Session = Depends(get_db)
 ):
     query = db.query(Event).join(User, Event.organizer_id == User.id).options(joinedload(Event.organizer))
+    
     if search:
         query = query.filter(Event.title.ilike(f"%{search}%"))
     if category_id:
         query = query.filter(Event.category_id == category_id)
-    events = query.offset(skip).limit(limit).all()
+
+    if price_min is not None:
+        query = query.filter(Event.price >= price_min)
+    if price_max is not None:
+        query = query.filter(Event.price <= price_max)
     
+    if date_from:
+        query = query.filter(Event.date >= date_from)
+    if date_to:
+        query = query.filter(Event.date <= date_to)
+
+    total = query.count()
+
+    sort_column = {
+        "date": Event.date,
+        "price": Event.price,
+        "title": Event.title,
+        "created_at": Event.created_at
+    }.get(sort_by, Event.date)
+    
+    query = query.order_by(desc(sort_column) if order == "desc" else asc(sort_column))
+
+    events = query.offset(skip).limit(limit).all()
+
     catalog_events = []
     for event in events:
         catalog_events.append({
@@ -39,7 +70,13 @@ async def get_events_catalog(
             "max_participants": event.max_participants,
             "category_id": event.category_id
         })
-    return catalog_events
+
+    return CatalogResponse(
+        items=catalog_events,
+        total=total,
+        skip=skip,
+        limit=limit
+    )
 
 @router.post("/", response_model=EventResponse)
 async def create_event(
