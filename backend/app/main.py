@@ -1,10 +1,8 @@
 from fastapi import FastAPI
-from app.api.core.db import engine, Base
+from fastapi.middleware.cors import CORSMiddleware
+from app.api.core.db import engine, Base, get_db
 from app.api.models import user, event, group, chat, attendance
 from app.api.endpoints import auth, events, groups, chat as chat_endpoints, attendance as attendance_endpoints, users, admin, category
-from fastapi.middleware.cors import CORSMiddleware
-
-Base.metadata.create_all(bind=engine)
 
 app = FastAPI(
     title="EventTogether API",
@@ -19,6 +17,8 @@ app.add_middleware(
     allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"],
     allow_headers=["*"],
 )
+
+Base.metadata.create_all(bind=engine)
 
 app.include_router(auth.router, prefix="/auth", tags=["Auth"])
 app.include_router(events.router, prefix="/events", tags=["Events"])

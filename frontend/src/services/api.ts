@@ -209,10 +209,13 @@ export const userAPI = {
   deleteProfile: (): Promise<AxiosResponse<void>> =>
     api.delete('/users/me'),
 
-  uploadAvatar: (formData: FormData): Promise<AxiosResponse<User>> =>
+  uploadAvatar: (formData: FormData): Promise<AxiosResponse<{ avatar_url: string }>> =>
     api.post('/users/me/avatar', formData, {
       headers: { 'Content-Type': 'multipart/form-data' },
     }),
+  
+  deleteAvatar: (): Promise<AxiosResponse<{ message: string }>> =>
+    api.delete('/users/me/avatar'),
 };
 
 export const eventsAPI = {
