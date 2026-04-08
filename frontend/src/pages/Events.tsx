@@ -3,7 +3,6 @@ import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { Helmet } from 'react-helmet-async';
 import Button from '../components/Button';
 import EventCard from '../components/EventCard';
-import EventMap from '../components/EventMap';
 import SearchBar from '../components/SearchBar';
 import FilterButtons from '../components/FilterButtons';
 import arrowone from '../assets/img/arrowone.png';
@@ -186,16 +185,6 @@ const Events = () => {
 
   const totalPages = Math.ceil(total / limit);
 
-  const mapEvents = events
-    .filter(e => e.latitude && e.longitude)
-    .map(event => ({
-      id: event.id,
-      title: event.title,
-      latitude: event.latitude ?? null,
-      longitude: event.longitude ?? null,
-      location: event.location || 'Адрес не указан'
-    }));
-
   return (
     <div className="min-h-screen bg-white">
       <Helmet>
@@ -299,23 +288,6 @@ const Events = () => {
               </button>
             </div>
           </div>
-        </div>
-      </section>
-
-      <section className="py-12 bg-gray-50">
-        <div className="container mx-auto px-4">
-          <h2 className="text-3xl font-bold text-center mb-8">
-            События на карте
-          </h2>
-          {mapEvents.length > 0 ? (
-            <EventMap events={mapEvents} height="500px" />
-          ) : (
-            <div className="text-center py-12 bg-white rounded-lg">
-              <p className="text-gray-500">
-                Нет событий с координатами для отображения на карте
-              </p>
-            </div>
-          )}
         </div>
       </section>
 
