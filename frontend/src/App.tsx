@@ -1,4 +1,5 @@
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
+import { HelmetProvider } from 'react-helmet-async';
 import { AuthProvider } from './context/AuthContext';
 import PrivateRoute from './components/PrivateRoute';
 
@@ -18,59 +19,61 @@ import Footer from './components/Footer';
 
 function App() {
   return (
-    <AuthProvider>
-      <Router>
-        <div className="flex flex-col min-h-screen">
-          <Header />
-          <main className="flex-grow">
-            <Routes>
-              <Route path="/" element={<Home />} />
-              <Route path="/login" element={<Login />} />
-              <Route path="/register" element={<Register />} />
-              <Route path="/forgot-password" element={<ForgotPassword />} />
-              <Route path="/success" element={<SuccessNotification />} />
-              <Route path="/events" element={<Events />} />
-              <Route path="/groups" element={<Groups />} />
+    <HelmetProvider>
+      <AuthProvider>
+        <Router>
+          <div className="flex flex-col min-h-screen">
+            <Header />
+            <main className="flex-grow">
+              <Routes>
+                <Route path="/" element={<Home />} />
+                <Route path="/login" element={<Login />} />
+                <Route path="/register" element={<Register />} />
+                <Route path="/forgot-password" element={<ForgotPassword />} />
+                <Route path="/success" element={<SuccessNotification />} />
+                <Route path="/events" element={<Events />} />
+                <Route path="/groups" element={<Groups />} />
 
-              <Route 
-                path="/create-event" 
-                element={
-                  <PrivateRoute requireAuth={true}>
-                    <CreateEvent />
-                  </PrivateRoute>
-                } 
-              />
-              <Route 
-                path="/create-group" 
-                element={
-                  <PrivateRoute requireAuth={true}>
-                    <CreateGroup />
-                  </PrivateRoute>
-                } 
-              />
-              <Route 
-                path="/profile" 
-                element={
-                  <PrivateRoute requireAuth={true}>
-                    <Profile />
-                  </PrivateRoute>
-                } 
-              />
+                <Route 
+                  path="/create-event" 
+                  element={
+                    <PrivateRoute requireAuth={true}>
+                      <CreateEvent />
+                    </PrivateRoute>
+                  } 
+                />
+                <Route 
+                  path="/create-group" 
+                  element={
+                    <PrivateRoute requireAuth={true}>
+                      <CreateGroup />
+                    </PrivateRoute>
+                  } 
+                />
+                <Route 
+                  path="/profile" 
+                  element={
+                    <PrivateRoute requireAuth={true}>
+                      <Profile />
+                    </PrivateRoute>
+                  } 
+                />
 
-              <Route 
-                path="/admin" 
-                element={
-                  <PrivateRoute allowedRoles={['moderator', 'admin']}>
-                    <Admin />
-                  </PrivateRoute>
-                } 
-              />
-            </Routes>
-          </main>
-          <Footer />
-        </div>
-      </Router>
-    </AuthProvider>
+                <Route 
+                  path="/admin" 
+                  element={
+                    <PrivateRoute allowedRoles={['moderator', 'admin']}>
+                      <Admin />
+                    </PrivateRoute>
+                  } 
+                />
+              </Routes>
+            </main>
+            <Footer />
+          </div>
+        </Router>
+      </AuthProvider>
+    </HelmetProvider>
   );
 }
 

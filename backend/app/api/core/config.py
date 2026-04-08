@@ -18,5 +18,6 @@ class Settings:
     S3_SECRET_KEY: str = os.getenv("S3_SECRET_KEY", "minioadmin")
     S3_BUCKET_NAME: str = os.getenv("S3_BUCKET_NAME", "avatars")
     S3_PUBLIC_URL: str = os.getenv("S3_PUBLIC_URL", "http://localhost:9000/avatars")
+    YANDEX_MAPS_API_KEY: str = os.getenv("YANDEX_MAPS_API_KEY", "")
 
 settings = Settings()

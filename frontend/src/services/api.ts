@@ -54,6 +54,8 @@ export interface Event {
   price?: number;
   category_name?: string | null;
   maxParticipants?: number;
+  latitude?: number | null;
+  longitude?: number | null; 
   [key: string]: any;
 }
 

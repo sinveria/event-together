@@ -11,6 +11,10 @@ class Event(Base):
     description = Column(Text)
     date = Column(DateTime(timezone=True), nullable=False)
     location = Column(String(300), nullable=False)
+
+    latitude = Column(Float, nullable=True)
+    longitude = Column(Float, nullable=True)
+
     price = Column(Float, default=0.0)
     organizer_id = Column(Integer, ForeignKey("users.id"), nullable=False)
     max_participants = Column(Integer, nullable=False)

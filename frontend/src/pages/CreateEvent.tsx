@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import Button from '../components/Button';
 import FormInput from '../components/FormInput';
+import LocationPicker from '../components/LocationPicker';
 import createeventleft from '../assets/img/createeventleft.png';
 import createeventright from '../assets/img/createeventright.png';
 import { eventsAPI, categoriesAPI, Category } from '../services/api';
@@ -15,6 +16,8 @@ interface EventFormData {
     price: number;
     max_participants: number;
     category_id: number | null;
+    latitude?: number | null;
+    longitude?: number | null;
 }
 
 interface FormErrors {
@@ -25,6 +28,8 @@ interface FormErrors {
     price?: string;
     max_participants?: string;
     category_id?: string;
+    latitude?: number | null;
+    longitude?: number | null;
     submit?: string;
 }
 
@@ -39,7 +44,9 @@ const CreateEvent = () => {
         location: '',
         price: 0,
         max_participants: 10,
-        category_id: null
+        category_id: null,
+        latitude: null,
+        longitude: null
     });
 
     const [categories, setCategories] = useState<Category[]>([]);
@@ -47,6 +54,7 @@ const CreateEvent = () => {
     const [errors, setErrors] = useState<FormErrors>({});
     const [loading, setLoading] = useState<boolean>(false);
     const [successMessage, setSuccessMessage] = useState<string>('');
+    const [coordinates, setCoordinates] = useState<{ lat: number; lon: number } | null>(null);
 
     useEffect(() => {
         const loadCategories = async () => {
@@ -60,15 +68,13 @@ const CreateEvent = () => {
                 setLoadingCategories(false);
             }
         };
-
         loadCategories();
     }, []);
 
-    const handleInputChange = (field: keyof EventFormData) => (e: ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
-        setFormData(prev => ({
-            ...prev,
-            [field]: e.target.value
-        }));
+    const handleInputChange = (field: keyof EventFormData) => (
+        e: ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>
+    ) => {
+        setFormData(prev => ({ ...prev, [field]: e.target.value }));
         if (errors[field]) {
             setErrors(prev => ({ ...prev, [field]: '' }));
         }
@@ -78,47 +84,40 @@ const CreateEvent = () => {
         e: ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>
     ) => {
         const value = parseFloat(e.target.value) || 0;
-        setFormData(prev => ({
-            ...prev,
-            [field]: value
-        }));
+        setFormData(prev => ({ ...prev, [field]: value }));
     };
 
     const handleCategoryChange = (e: ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
         const value = e.target.value === '' ? null : parseInt(e.target.value);
-        setFormData(prev => ({
-            ...prev,
-            category_id: value
-        }));
+        setFormData(prev => ({ ...prev, category_id: value }));
         if (errors.category_id) {
             setErrors(prev => ({ ...prev, category_id: '' }));
         }
     };
 
+    const handleLocationSelect = (latitude: number, longitude: number) => {
+        setCoordinates({ lat: latitude, lon: longitude });
+        setFormData(prev => ({ ...prev, latitude, longitude }));
+    };
+
     const validateForm = (): FormErrors => {
         const newErrors: FormErrors = {};
-
         if (!formData.title.trim()) newErrors.title = 'Введите название события';
         if (!formData.description.trim()) newErrors.description = 'Введите описание';
         if (!formData.date) newErrors.date = 'Выберите дату и время';
         if (!formData.location.trim()) newErrors.location = 'Введите местоположение';
         if (formData.max_participants < 1) newErrors.max_participants = 'Минимум 1 участник';
         if (formData.price < 0) newErrors.price = 'Цена не может быть отрицательной';
-
         if (formData.date) {
             const eventDate = new Date(formData.date);
             const now = new Date();
-            if (eventDate <= now) {
-                newErrors.date = 'Дата должна быть в будущем';
-            }
+            if (eventDate <= now) newErrors.date = 'Дата должна быть в будущем';
         }
-
         return newErrors;
     };
 
     const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
         e.preventDefault();
-
         if (!user) {
             alert('Для создания события необходимо войти в систему');
             navigate('/login');
@@ -141,33 +140,26 @@ const CreateEvent = () => {
                 date: new Date(formData.date).toISOString(),
                 price: parseFloat(formData.price.toString()) || 0,
                 max_participants: parseInt(formData.max_participants.toString()) || 10,
-                category_id: formData.category_id || null
+                category_id: formData.category_id || null,
+                latitude: formData.latitude || null,
+                longitude: formData.longitude || null
             };
 
             const response = await eventsAPI.createEvent(eventData);
 
             if (response.status === 201 || response.status === 200) {
                 setSuccessMessage('Событие успешно создано!');
-
                 setFormData({
-                    title: '',
-                    description: '',
-                    date: '',
-                    location: '',
-                    price: 0,
-                    max_participants: 10,
-                    category_id: null
+                    title: '', description: '', date: '', location: '',
+                    price: 0, max_participants: 10, category_id: null,
+                    latitude: null, longitude: null
                 });
-
-                setTimeout(() => {
-                    setSuccessMessage('');
-                }, 5000);
+                setCoordinates(null);
+                setTimeout(() => setSuccessMessage(''), 5000);
             }
         } catch (error) {
             console.error('Ошибка при создании события:', error);
-
             const axiosError = error as { response?: { status?: number; data?: { detail?: string } } };
-
             if (axiosError.response?.status === 401) {
                 alert('Сессия истекла. Пожалуйста, войдите снова.');
                 navigate('/login');
@@ -192,7 +184,6 @@ const CreateEvent = () => {
                                     Создайте событие
                                 </span>
                             </h1>
-
                             <p className="text-3xl md:text-4xl font-bold text-black leading-relaxed">
                                 Создайте событие, чтобы к вашей компании<br />
                                 присоединились
@@ -235,18 +226,8 @@ const CreateEvent = () => {
                                     error={errors.title}
                                     required
                                 />
-
-                                <img
-                                    src={createeventleft}
-                                    alt="Декоративное изображение"
-                                    className="absolute -left-24 -top-40 w-32 h-32 object-contain hidden lg:block"
-                                />
-
-                                <img
-                                    src={createeventright}
-                                    alt="Декоративное изображение"
-                                    className="absolute -right-24 -top-40 w-32 h-32 object-contain hidden lg:block"
-                                />
+                                <img src={createeventleft} alt="Декоративное изображение" className="absolute -left-24 -top-40 w-32 h-32 object-contain hidden lg:block" />
+                                <img src={createeventright} alt="Декоративное изображение" className="absolute -right-24 -top-40 w-32 h-32 object-contain hidden lg:block" />
                             </div>
 
                             <FormInput
@@ -262,14 +243,12 @@ const CreateEvent = () => {
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
                                 <FormInput
                                     label="Дата и время"
-                                    placeholder=""
+                                    type="datetime-local"
                                     value={formData.date}
                                     onChange={handleInputChange('date')}
-                                    type="datetime-local"
                                     error={errors.date}
                                     required
                                 />
-
                                 <FormInput
                                     label="Местоположение"
                                     placeholder="Где будет проходить событие?"
@@ -279,6 +258,24 @@ const CreateEvent = () => {
                                     required
                                 />
                             </div>
+
+                            {/* 👇 Компонент выбора локации на карте */}
+                            {formData.location && (
+                                <div className="mb-6">
+                                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                                        Точка на карте
+                                    </label>
+                                    <LocationPicker 
+                                        address={formData.location}
+                                        onLocationSelect={handleLocationSelect}
+                                    />
+                                    {coordinates && (
+                                        <p className="text-sm text-gray-500 mt-2">
+                                            Координаты: {coordinates.lat.toFixed(6)}, {coordinates.lon.toFixed(6)}
+                                        </p>
+                                    )}
+                                </div>
+                            )}
 
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
                                 <FormInput
@@ -291,7 +288,6 @@ const CreateEvent = () => {
                                     step="0.01"
                                     error={errors.price}
                                 />
-
                                 <FormInput
                                     label="Максимум участников"
                                     placeholder="10"
@@ -323,8 +319,9 @@ const CreateEvent = () => {
                             <Button
                                 type="submit"
                                 disabled={loading}
-                                className={`w-full py-4 text-lg text-white bg-[#323FF0] hover:bg-[#2a35cc] rounded-lg mt-6 ${loading ? 'opacity-50 cursor-not-allowed' : ''
-                                    }`}
+                                className={`w-full py-4 text-lg text-white bg-[#323FF0] hover:bg-[#2a35cc] rounded-lg mt-6 ${
+                                    loading ? 'opacity-50 cursor-not-allowed' : ''
+                                }`}
                             >
                                 {loading ? 'Создание...' : 'Создать событие'}
                             </Button>

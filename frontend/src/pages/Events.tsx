@@ -1,7 +1,9 @@
 import { useState, useEffect } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
+import { Helmet } from 'react-helmet-async';
 import Button from '../components/Button';
 import EventCard from '../components/EventCard';
+import EventMap from '../components/EventMap';
 import SearchBar from '../components/SearchBar';
 import FilterButtons from '../components/FilterButtons';
 import arrowone from '../assets/img/arrowone.png';
@@ -23,6 +25,8 @@ interface FormattedEvent {
   organizer: string;
   category_id: number | null;
   category_name: string | null;
+  latitude?: number | null;
+  longitude?: number | null;
 }
 
 const Events = () => {
@@ -139,7 +143,9 @@ const Events = () => {
       maxParticipants: event.max_participants || 0,
       organizer: event.organizer_name || event.organizer || 'Неизвестно',
       category_id: event.category_id || null,
-      category_name: event.category_name || null
+      category_name: event.category_name || null,
+      latitude: event.latitude,
+      longitude: event.longitude
     };
   };
 
@@ -180,8 +186,41 @@ const Events = () => {
 
   const totalPages = Math.ceil(total / limit);
 
+  const mapEvents = events
+    .filter(e => e.latitude && e.longitude)
+    .map(event => ({
+      id: event.id,
+      title: event.title,
+      latitude: event.latitude ?? null,
+      longitude: event.longitude ?? null,
+      location: event.location || 'Адрес не указан'
+    }));
+
   return (
     <div className="min-h-screen bg-white">
+      <Helmet>
+        <title>События | EventTogether</title>
+        <meta 
+          name="description" 
+          content="Найдите интересные события и мероприятия в вашем городе. Присоединяйтесь к событиям и встречайте новых людей!"
+        />
+        <meta 
+          name="keywords" 
+          content="события, мероприятия, встречи, конференции, концерты, Москва, Санкт-Петербург"
+        />
+        
+        <meta property="og:title" content="События | EventTogether" />
+        <meta 
+          property="og:description" 
+          content="Найдите интересные события и мероприятия"
+        />
+        <meta property="og:type" content="website" />
+        <meta property="og:url" content="https://eventtogether.ru/events" />
+        <meta property="og:image" content="https://eventtogether.ru/og-image.jpg" />
+        
+        <link rel="canonical" href="https://eventtogether.ru/events" />
+      </Helmet>
+
       <section className="pt-32 pb-20 bg-white">
         <div className="container mx-auto px-4">
           <div className="text-center max-w-4xl mx-auto">
@@ -260,6 +299,23 @@ const Events = () => {
               </button>
             </div>
           </div>
+        </div>
+      </section>
+
+      <section className="py-12 bg-gray-50">
+        <div className="container mx-auto px-4">
+          <h2 className="text-3xl font-bold text-center mb-8">
+            События на карте
+          </h2>
+          {mapEvents.length > 0 ? (
+            <EventMap events={mapEvents} height="500px" />
+          ) : (
+            <div className="text-center py-12 bg-white rounded-lg">
+              <p className="text-gray-500">
+                Нет событий с координатами для отображения на карте
+              </p>
+            </div>
+          )}
         </div>
       </section>
 

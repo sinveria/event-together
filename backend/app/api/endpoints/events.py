@@ -10,6 +10,7 @@ from app.api.models.category import Category
 from app.api.schemas.event import Catalog, EventResponse, EventCreate, EventUpdate, CatalogResponse
 from app.api.core.security import get_current_user
 from app.api.dependencies import get_current_active_user, check_event_ownership
+from app.api.services.maps import yandex_maps_service
 
 router = APIRouter()
 
@@ -89,6 +90,8 @@ async def create_event(
         if not category:
             raise HTTPException(status_code=400, detail="Category not found")
     
+    coords = await yandex_maps_service.geocode_address(event_data.location)
+
     db_event = Event(
         title=event_data.title,
         description=event_data.description,
@@ -97,8 +100,11 @@ async def create_event(
         price=event_data.price,
         max_participants=event_data.max_participants,
         organizer_id=current_user.id,
-        category_id=event_data.category_id
+        category_id=event_data.category_id,
+        latitude=coords["latitude"] if coords else None,
+        longitude=coords["longitude"] if coords else None,
     )
+    
     db.add(db_event)
     db.commit()
     db.refresh(db_event)
