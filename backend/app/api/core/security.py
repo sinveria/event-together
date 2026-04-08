@@ -37,11 +37,29 @@ def create_access_token(data: dict, expires_delta: Optional[timedelta] = None):
         expire = datetime.utcnow() + expires_delta
     else:
         expire = datetime.utcnow() + timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
-    to_encode.update({"exp": expire})
+    
+    to_encode.update({
+        "exp": expire, 
+        "type": "access" 
+    })
     encoded_jwt = jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
     return encoded_jwt
 
-async def get_current_user(token: str = Depends(oauth2_scheme), db: Session = Depends(get_db)):
+def create_refresh_token(user_id: int, email: str):
+    expire = datetime.utcnow() + timedelta(days=365)
+    to_encode = {
+        "sub": email,
+        "user_id": user_id,
+        "exp": expire,
+        "type": "refresh"
+    }
+    encoded_jwt = jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
+    return encoded_jwt
+
+async def get_current_user(
+    token: str = Depends(oauth2_scheme), 
+    db: Session = Depends(get_db)
+) -> User:
     credentials_exception = HTTPException(
         status_code=status.HTTP_401_UNAUTHORIZED,
         detail="Could not validate credentials",
@@ -50,15 +68,42 @@ async def get_current_user(token: str = Depends(oauth2_scheme), db: Session = De
     try:
         payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
         email: str = payload.get("sub")
-        if email is None:
+        token_type: str = payload.get("type")
+
+        if email is None or token_type != "access":
             raise credentials_exception
+            
     except JWTError:
         raise credentials_exception
     
     user = db.query(User).filter(User.email == email).first()
-    if user is None:
+    if user is None or not user.is_active:
         raise credentials_exception
     return user
+
+def verify_refresh_token_in_db(refresh_token: str, db: Session) -> Optional[User]:
+    try:
+        payload = jwt.decode(refresh_token, SECRET_KEY, algorithms=[ALGORITHM])
+        
+        if payload.get("type") != "refresh":
+            return None
+            
+        email: str = payload.get("sub")
+        if email is None:
+            return None
+            
+        user = db.query(User).filter(User.email == email).first()
+        
+        if not user or not user.is_active:
+            return None
+            
+        if user.refresh_token != refresh_token:
+            return None
+            
+        return user
+        
+    except JWTError:
+        return None
 
 async def get_current_admin(current_user: User = Depends(get_current_user)):
     if current_user.role != "admin":

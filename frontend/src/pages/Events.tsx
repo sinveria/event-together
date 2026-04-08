@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import Button from '../components/Button';
 import EventCard from '../components/EventCard';
 import SearchBar from '../components/SearchBar';
@@ -27,38 +27,99 @@ interface FormattedEvent {
 
 const Events = () => {
   const { user } = useAuth();
-  
+  const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+
   const [searchTerm, setSearchTerm] = useState<string>('');
   const [activeFilter, setActiveFilter] = useState<string | number>('all');
+  const [priceMin, setPriceMin] = useState<string>('');
+  const [priceMax, setPriceMax] = useState<string>('');
+  const [dateFrom, setDateFrom] = useState<string>('');
+  const [dateTo, setDateTo] = useState<string>('');
+  const [sortBy, setSortBy] = useState<'date' | 'price' | 'title' | 'created_at'>('date');
+  const [order, setOrder] = useState<'asc' | 'desc'>('asc');
+  const [page, setPage] = useState<number>(1);
+  const [limit] = useState<number>(10);
+  const [total, setTotal] = useState<number>(0);
   const [events, setEvents] = useState<ApiEvent[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    const fetchEvents = async () => {
-      try {
-        setLoading(true);
-        const response = await eventsAPI.getAllEvents();
-        setEvents(response.data);
-        setError(null);
-      } catch (err) {
-        console.error('Ошибка при загрузке событий:', err);
-        setError('Не удалось загрузить события. Попробуйте позже.');
-      } finally {
-        setLoading(false);
-      }
-    };
+    const pageParam = searchParams.get('page');
+    const sortParam = searchParams.get('sort_by');
+    const orderParam = searchParams.get('order');
+    const searchParam = searchParams.get('search');
+    const categoryParam = searchParams.get('category_id');
+    const priceMinParam = searchParams.get('price_min');
+    const priceMaxParam = searchParams.get('price_max');
+    const dateFromParam = searchParams.get('date_from');
+    const dateToParam = searchParams.get('date_to');
 
-    fetchEvents();
+    if (pageParam) setPage(Number(pageParam));
+    if (sortParam === 'date' || sortParam === 'price' || sortParam === 'title' || sortParam === 'created_at') {
+      setSortBy(sortParam);
+    }
+    if (orderParam === 'asc' || orderParam === 'desc') {
+      setOrder(orderParam);
+    }
+    if (searchParam) setSearchTerm(searchParam);
+    if (categoryParam) setActiveFilter(Number(categoryParam));
+    if (priceMinParam) setPriceMin(priceMinParam);
+    if (priceMaxParam) setPriceMax(priceMaxParam);
+    if (dateFromParam) setDateFrom(dateFromParam);
+    if (dateToParam) setDateTo(dateToParam);
   }, []);
+
+  const fetchEvents = async () => {
+    try {
+      setLoading(true);
+      const response = await eventsAPI.getAllEvents({
+        skip: (page - 1) * limit,
+        limit,
+        search: searchTerm || undefined,
+        category_id: activeFilter !== 'all' && activeFilter !== 'none' ? Number(activeFilter) : undefined,
+        sort_by: sortBy,
+        order,
+        price_min: priceMin ? Number(priceMin) : undefined,
+        price_max: priceMax ? Number(priceMax) : undefined,
+        date_from: dateFrom || undefined,
+        date_to: dateTo || undefined,
+      });
+
+      setEvents(response.data.items);
+      setTotal(response.data.total);
+      setError(null);
+    } catch (err) {
+      console.error('Ошибка при загрузке событий:', err);
+      setError('Не удалось загрузить события. Попробуйте позже.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchEvents();
+  }, [page, searchTerm, activeFilter, sortBy, order, priceMin, priceMax, dateFrom, dateTo]);
+
+  useEffect(() => {
+    const params = new URLSearchParams();
+    if (page > 1) params.set('page', page.toString());
+    if (sortBy !== 'date') params.set('sort_by', sortBy);
+    if (order !== 'asc') params.set('order', order);
+    if (searchTerm) params.set('search', searchTerm);
+    if (activeFilter !== 'all') params.set('category_id', activeFilter.toString());
+    if (priceMin) params.set('price_min', priceMin);
+    if (priceMax) params.set('price_max', priceMax);
+    if (dateFrom) params.set('date_from', dateFrom);
+    if (dateTo) params.set('date_to', dateTo);
+    
+    navigate(`?${params.toString()}`, { replace: true });
+  }, [page, sortBy, order, searchTerm, activeFilter, priceMin, priceMax, dateFrom, dateTo, navigate]);
 
   const formatEventForCard = (event: ApiEvent): FormattedEvent => {
     const date = new Date(event.date);
-    const formattedDate = date.toLocaleDateString('ru-RU', {
-      day: 'numeric',
-      month: 'long'
-    });
-
+    const formattedDate = date.toLocaleDateString('ru-RU', { day: 'numeric', month: 'long' });
     const fullDate = date.toLocaleString('ru-RU', {
       day: 'numeric',
       month: 'long',
@@ -82,18 +143,42 @@ const Events = () => {
     };
   };
 
-  const filteredEvents: FormattedEvent[] = events
-    .map(formatEventForCard)
-    .filter((event: FormattedEvent) => {
-      const matchesSearch = event.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        event.description.toLowerCase().includes(searchTerm.toLowerCase());
+  const handleSortChange = (newSortBy: 'date' | 'price' | 'title' | 'created_at') => {
+    if (sortBy === newSortBy) {
+      setOrder(order === 'asc' ? 'desc' : 'asc');
+    } else {
+      setSortBy(newSortBy);
+      setOrder('asc');
+    }
+    setPage(1);
+  };
 
-      const matchesFilter = activeFilter === 'all' ||
-        (activeFilter === 'none' && !event.category_name) ||
-        event.category_id === activeFilter;
+  const handlePageChange = (newPage: number) => {
+    const totalPages = Math.ceil(total / limit);
+    if (newPage >= 1 && newPage <= totalPages) {
+      setPage(newPage);
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+  };
 
-      return matchesSearch && matchesFilter;
-    });
+  const handleSearchChange = (value: string) => { setSearchTerm(value); setPage(1); };
+  const handleFilterChange = (filter: string | number) => { setActiveFilter(filter); setPage(1); };
+  const handlePriceMinChange = (value: string) => { setPriceMin(value); setPage(1); };
+  const handlePriceMaxChange = (value: string) => { setPriceMax(value); setPage(1); };
+  const handleDateFromChange = (value: string) => { setDateFrom(value); setPage(1); };
+  const handleDateToChange = (value: string) => { setDateTo(value); setPage(1); };
+
+  const handleResetFilters = () => {
+    setSearchTerm('');
+    setActiveFilter('all');
+    setPriceMin('');
+    setPriceMax('');
+    setDateFrom('');
+    setDateTo('');
+    setPage(1);
+  };
+
+  const totalPages = Math.ceil(total / limit);
 
   return (
     <div className="min-h-screen bg-white">
@@ -101,45 +186,25 @@ const Events = () => {
         <div className="container mx-auto px-4">
           <div className="text-center max-w-4xl mx-auto">
             <div className="flex items-center justify-center gap-6 mb-12 relative">
-              <img
-                src={arrowone}
-                alt="Стрелка"
-                className="w-24 h-24 object-contain absolute left-0"
-              />
-
+              <img src={arrowone} alt="Стрелка" className="w-24 h-24 object-contain absolute left-0" />
               <h1 className="text-4xl md:text-5xl font-bold text-white">
                 <span className="bg-[#327BF0] px-6 py-3 rounded-lg inline-block">Предстоящие события</span>
               </h1>
             </div>
-
             <div className="flex items-center justify-center gap-6 mb-8 relative">
               <p className="text-3xl md:text-4xl font-bold text-black leading-relaxed">
                 Просматривайте мероприятия<br />
                 и присоединяйтесь к ним<br />
                 или создайте свое событие
               </p>
-
-              <img
-                src={arrowtwo}
-                alt="Стрелка"
-                className="w-24 h-24 object-contain absolute right-0 -top-8"
-              />
+              <img src={arrowtwo} alt="Стрелка" className="w-24 h-24 object-contain absolute right-0 -top-8" />
             </div>
-
             {canCreateEvent(user?.role) ? (
-              <Button
-                as={Link}
-                to="/create-event"
-                className="px-8 py-4 text-lg text-white bg-[#323FF0] hover:bg-[#2a35cc] rounded-full"
-              >
+              <Button as={Link} to="/create-event" className="px-8 py-4 text-lg text-white bg-[#323FF0] hover:bg-[#2a35cc] rounded-full">
                 Создать событие
               </Button>
             ) : (
-              <Button
-                as={Link}
-                to="/login"
-                className="px-8 py-4 text-lg text-gray-700 bg-gray-200 hover:bg-gray-300 rounded-full"
-              >
+              <Button as={Link} to="/login" className="px-8 py-4 text-lg text-gray-700 bg-gray-200 hover:bg-gray-300 rounded-full">
                 Войдите для создания
               </Button>
             )}
@@ -151,16 +216,49 @@ const Events = () => {
         <div className="mx-48">
           <div className="flex flex-col items-center gap-6">
             <div className="max-w-md w-full">
-              <SearchBar
-                searchTerm={searchTerm}
-                onSearchChange={setSearchTerm}
-              />
+              <SearchBar searchTerm={searchTerm} onSearchChange={handleSearchChange} />
+            </div>
+            <FilterButtons activeFilter={activeFilter} onFilterChange={handleFilterChange} />
+            
+            <div className="w-full max-w-4xl bg-gray-50 p-6 rounded-xl">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-lg font-semibold text-gray-700">Расширенные фильтры</h3>
+                <button onClick={handleResetFilters} className="text-sm text-[#323FF0] hover:text-[#2a35cc] font-medium">
+                  Сбросить все
+                </button>
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                <div className="space-y-2">
+                  <label className="block text-sm font-medium text-gray-600">Цена от (₽)</label>
+                  <input type="number" min="0" value={priceMin} onChange={(e) => handlePriceMinChange(e.target.value)} placeholder="0" className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-[#323FF0]" />
+                </div>
+                <div className="space-y-2">
+                  <label className="block text-sm font-medium text-gray-600">Цена до (₽)</label>
+                  <input type="number" min="0" value={priceMax} onChange={(e) => handlePriceMaxChange(e.target.value)} placeholder="10000" className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-[#323FF0]" />
+                </div>
+                <div className="space-y-2">
+                  <label className="block text-sm font-medium text-gray-600">Дата от</label>
+                  <input type="date" value={dateFrom} onChange={(e) => handleDateFromChange(e.target.value)} className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-[#323FF0]" />
+                </div>
+                <div className="space-y-2">
+                  <label className="block text-sm font-medium text-gray-600">Дата до</label>
+                  <input type="date" value={dateTo} onChange={(e) => handleDateToChange(e.target.value)} className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-[#323FF0]" />
+                </div>
+              </div>
             </div>
 
-            <FilterButtons
-              activeFilter={activeFilter}
-              onFilterChange={setActiveFilter}
-            />
+            <div className="flex items-center gap-4 mt-4">
+              <span className="text-gray-600 font-medium">Сортировать:</span>
+              <select value={sortBy} onChange={(e) => handleSortChange(e.target.value as 'date' | 'price' | 'title' | 'created_at')} className="px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-[#323FF0] bg-white">
+                <option value="date">По дате</option>
+                <option value="price">По цене</option>
+                <option value="title">По названию</option>
+                <option value="created_at">По дате создания</option>
+              </select>
+              <button onClick={() => setOrder(order === 'asc' ? 'desc' : 'asc')} className="px-3 py-2 bg-gray-100 hover:bg-gray-200 rounded-lg transition" title={order === 'asc' ? 'По возрастанию' : 'По убыванию'}>
+                {order === 'asc' ? '↑' : '↓'}
+              </button>
+            </div>
           </div>
         </div>
       </section>
@@ -176,19 +274,33 @@ const Events = () => {
               <p className="text-xl text-red-500">{error}</p>
             </div>
           ) : (
-            <div className="border-t border-gray-200">
-              {filteredEvents.map((event: FormattedEvent) => (
-                <EventCard key={event.id} event={event} />
-              ))}
-
-              {filteredEvents.length === 0 && (
+            <>
+              <div className="border-t border-gray-200">
+                {events.map((event: ApiEvent) => (
+                  <EventCard key={event.id} event={formatEventForCard(event)} />
+                ))}
+              </div>
+              {totalPages > 1 && (
+                <div className="flex justify-center items-center gap-2 mt-8">
+                  <button onClick={() => handlePageChange(page - 1)} disabled={page === 1} className="px-4 py-2 rounded-lg bg-gray-200 disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-300 transition">
+                    ← Назад
+                  </button>
+                  <span className="px-4 py-2 text-gray-700 font-medium">
+                    Страница {page} из {totalPages} (Всего: {total})
+                  </span>
+                  <button onClick={() => handlePageChange(page + 1)} disabled={page === totalPages} className="px-4 py-2 rounded-lg bg-gray-200 disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-300 transition">
+                    Вперед →
+                  </button>
+                </div>
+              )}
+              {events.length === 0 && (
                 <div className="text-center py-12">
                   <p className="text-xl text-gray-500">
                     Мероприятия не найдены. {searchTerm ? 'Попробуйте изменить параметры поиска.' : 'Будьте первым, создайте событие!'}
                   </p>
                 </div>
               )}
-            </div>
+            </>
           )}
         </div>
       </section>
@@ -196,16 +308,9 @@ const Events = () => {
       <section className="pb-20 bg-white">
         <div className="mx-48">
           <div className="flex items-center gap-4 mb-12">
-            <h2 className="text-4xl md:text-5xl font-bold text-black">
-              Как это работает
-            </h2>
-            <img
-              src={question}
-              alt="Вопрос"
-              className="w-24 h-24 object-contain"
-            />
+            <h2 className="text-4xl md:text-5xl font-bold text-black">Как это работает</h2>
+            <img src={question} alt="Вопрос" className="w-24 h-24 object-contain" />
           </div>
-
           <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
             <div>
               <p className="text-lg text-gray-700 leading-relaxed">

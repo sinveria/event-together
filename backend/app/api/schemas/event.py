@@ -1,6 +1,6 @@
 from pydantic import BaseModel
 from datetime import datetime
-from typing import Optional
+from typing import Optional, List
 from .user import UserResponse
 
 class EventBase(BaseModel):
@@ -45,6 +45,15 @@ class EventResponse(EventBase):
     current_participants: int = 0
     created_at: datetime
     category_name: Optional[str] = None
+
+    class Config:
+        from_attributes = True
+
+class CatalogResponse(BaseModel):
+    items: List[Catalog]
+    total: int
+    skip: int
+    limit: int
 
     class Config:
         from_attributes = True

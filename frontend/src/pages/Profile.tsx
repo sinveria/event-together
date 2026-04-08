@@ -1,4 +1,3 @@
-// src/pages/Profile.tsx
 import { useState, useEffect, ChangeEvent, KeyboardEvent } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useNavigate, Link } from 'react-router-dom';
@@ -23,18 +22,11 @@ const Profile = () => {
   const [about, setAbout] = useState<string>('');
   const [isSaving, setIsSaving] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
+  const [uploadingAvatar, setUploadingAvatar] = useState<boolean>(false);
 
   const [visitedEvents, setVisitedEvents] = useState<VisitedEvent[]>([
-    {
-      id: 1,
-      title: "Ежегодная конференция руководителей",
-      date: "18 сентября, 2025",
-    },
-    {
-      id: 2,
-      title: "Встреча технологических новаторов",
-      date: "12 июля, 2025",
-    }
+    { id: 1, title: "Ежегодная конференция руководителей", date: "18 сентября, 2025" },
+    { id: 2, title: "Встреча технологических новаторов", date: "12 июля, 2025" }
   ]);
 
   useEffect(() => {
@@ -54,22 +46,14 @@ const Profile = () => {
       setError('Имя не может быть пустым');
       return;
     }
-
     try {
       setIsSaving(true);
       setError(null);
-
       await userAPI.updateProfile({ name: name.trim() });
-
-      if (updateUser) {
-        updateUser({ name: name.trim() });
-      }
-      
+      if (updateUser) updateUser({ name: name.trim() });
       setIsEditingName(false);
-      console.log('Имя обновлено:', name);
-    } catch (err) {
-      const axiosError = err as { response?: { data?: { detail?: string } }; message?: string };
-      setError('Ошибка при сохранении имени: ' + (axiosError.response?.data?.detail || axiosError.message || 'Неизвестная ошибка'));
+    } catch (err: any) {
+      setError('Ошибка: ' + (err.response?.data?.detail || err.message || 'Неизвестная ошибка'));
     } finally {
       setIsSaving(false);
     }
@@ -79,18 +63,11 @@ const Profile = () => {
     try {
       setIsSaving(true);
       setError(null);
-      
       await userAPI.updateProfile({ about: about.trim() });
-      
-      if (updateUser) {
-        updateUser({ about: about.trim() });
-      }
-      
+      if (updateUser) updateUser({ about: about.trim() });
       setIsEditingAbout(false);
-      console.log('Описание обновлено:', about);
-    } catch (err) {
-      const axiosError = err as { response?: { data?: { detail?: string } }; message?: string };
-      setError('Ошибка при сохранении описания: ' + (axiosError.response?.data?.detail || axiosError.message || 'Неизвестная ошибка'));
+    } catch (err: any) {
+      setError('Ошибка: ' + (err.response?.data?.detail || err.message || 'Неизвестная ошибка'));
     } finally {
       setIsSaving(false);
     }
@@ -100,31 +77,36 @@ const Profile = () => {
     const file = event.target.files?.[0];
     if (!file) return;
 
+    const allowedTypes = ['image/jpeg', 'image/png', 'image/webp'];
+    if (!allowedTypes.includes(file.type)) {
+      setError('Разрешены только JPG, PNG, WebP');
+      return;
+    }
+    if (file.size > 5 * 1024 * 1024) {
+      setError('Максимальный размер файла — 5MB');
+      return;
+    }
+
     try {
-      setIsSaving(true);
+      setUploadingAvatar(true);
       setError(null);
       
       const formData = new FormData();
-      formData.append('avatar', file);
+      formData.append('file', file);
       
-      // Если в api.ts нет uploadAvatar, закомментируй эту строку или добавь в api.ts:
-      // await userAPI.uploadAvatar(formData);
+      const response = await userAPI.uploadAvatar(formData);
       
       if (updateUser) {
-        const response = await userAPI.getProfile();
-        updateUser(response.data);
+        updateUser({ avatar_url: response.data.avatar_url });
       }
-      
-      console.log('Фото обновлено');
-    } catch (err) {
-      const axiosError = err as { response?: { data?: { detail?: string } }; message?: string };
-      setError('Ошибка при загрузке фото: ' + (axiosError.response?.data?.detail || axiosError.message || 'Неизвестная ошибка'));
+    } catch (err: any) {
+      setError('Ошибка загрузки: ' + (err.response?.data?.detail || err.message || 'Неизвестная ошибка'));
     } finally {
-      setIsSaving(false);
+      setUploadingAvatar(false);
+      event.target.value = '';
     }
   };
 
-  // Если user нет — можно показать загрузку или редирект
   if (!user) {
     return (
       <div className="min-h-screen bg-white pt-20 flex items-center justify-center">
@@ -133,10 +115,11 @@ const Profile = () => {
     );
   }
 
+  const avatarUrl = (user as User & { avatar_url?: string }).avatar_url;
+
   return (
     <div className="min-h-screen bg-white pt-20">
       <div className="container mx-auto py-8">
-        {/* Сообщение об ошибке */}
         {error && (
           <div className="mb-4 p-3 bg-red-100 text-red-700 rounded-lg">
             {error}
@@ -172,7 +155,7 @@ const Profile = () => {
                       <button
                         onClick={handleNameSave}
                         disabled={isSaving}
-                        className="bg-[#327BF0] text-white px-4 py-2 rounded-lg hover:bg-[#2a35cc] disabled:opacity-50 disabled:cursor-not-allowed"
+                        className="bg-[#327BF0] text-white px-4 py-2 rounded-lg hover:bg-[#2a35cc] disabled:opacity-50"
                       >
                         {isSaving ? '...' : '✓'}
                       </button>
@@ -186,16 +169,14 @@ const Profile = () => {
                     </div>
                   ) : (
                     <div className="flex items-center justify-between">
-                      <div className="flex items-center justify-between w-full">
-                        <p className="text-lg text-gray-900">{name || 'Не указано'}</p>
-                        <button
-                          onClick={() => setIsEditingName(true)}
-                          className="hover:opacity-70 transition-opacity ml-4"
-                          disabled={isSaving}
-                        >
-                          <img src={penIcon} alt="Редактировать" className="w-5 h-5" />
-                        </button>
-                      </div>
+                      <p className="text-lg text-gray-900">{name || 'Не указано'}</p>
+                      <button
+                        onClick={() => setIsEditingName(true)}
+                        disabled={isSaving}
+                        className="hover:opacity-70 transition-opacity ml-4"
+                      >
+                        <img src={penIcon} alt="Редактировать" className="w-5 h-5" />
+                      </button>
                     </div>
                   )}
                 </div>
@@ -203,12 +184,8 @@ const Profile = () => {
                 <div className="relative">
                   <label className="block text-sm font-medium text-gray-700 mb-2">Почта</label>
                   <div className="flex items-center justify-between">
-                    <div className="flex items-center justify-between w-full">
-                      <p className="text-lg text-gray-900">{user.email || 'Не указана'}</p>
-                      <span className="text-sm text-gray-500 ml-4">
-                        (изменить нельзя)
-                      </span>
-                    </div>
+                    <p className="text-lg text-gray-900">{user.email || 'Не указана'}</p>
+                    <span className="text-sm text-gray-500 ml-4">(изменить нельзя)</span>
                   </div>
                 </div>
               </div>
@@ -239,7 +216,7 @@ const Profile = () => {
                     <button
                       onClick={handleAboutSave}
                       disabled={isSaving}
-                      className="bg-[#327BF0] text-white px-4 py-2 rounded-lg hover:bg-[#2a35cc] disabled:opacity-50 disabled:cursor-not-allowed"
+                      className="bg-[#327BF0] text-white px-4 py-2 rounded-lg hover:bg-[#2a35cc] disabled:opacity-50"
                     >
                       {isSaving ? 'Сохранение...' : 'Сохранить'}
                     </button>
@@ -254,18 +231,16 @@ const Profile = () => {
                 </div>
               ) : (
                 <div className="flex items-start justify-between">
-                  <div className="flex items-start justify-between w-full">
-                    <p className="text-lg text-gray-700 flex-1">
-                      {about || 'Расскажите о себе...'}
-                    </p>
-                    <button
-                      onClick={() => setIsEditingAbout(true)}
-                      className="hover:opacity-70 transition-opacity ml-4 mt-1"
-                      disabled={isSaving}
-                    >
-                      <img src={penIcon} alt="Редактировать" className="w-5 h-5" />
-                    </button>
-                  </div>
+                  <p className="text-lg text-gray-700 flex-1">
+                    {about || 'Расскажите о себе...'}
+                  </p>
+                  <button
+                    onClick={() => setIsEditingAbout(true)}
+                    disabled={isSaving}
+                    className="hover:opacity-70 transition-opacity ml-4 mt-1"
+                  >
+                    <img src={penIcon} alt="Редактировать" className="w-5 h-5" />
+                  </button>
                 </div>
               )}
             </div>
@@ -273,12 +248,15 @@ const Profile = () => {
 
           <div className="space-y-6">
             <div className="bg-white rounded-lg p-6 text-center">
-              <div className="w-48 h-48 bg-gray-300 rounded-full mx-auto mb-6 flex items-center justify-center">
-                {(user as User & { avatar_url?: string }).avatar_url ? (
+              <div className="w-48 h-48 bg-gray-300 rounded-full mx-auto mb-6 flex items-center justify-center overflow-hidden">
+                {avatarUrl ? (
                   <img
-                    src={(user as User & { avatar_url?: string }).avatar_url}
+                    src={avatarUrl}
                     alt="Profile"
-                    className="w-48 h-48 rounded-full object-cover"
+                    className="w-full h-full object-cover"
+                    onError={(e) => {
+                      (e.target as HTMLImageElement).src = '/default-avatar.png';
+                    }}
                   />
                 ) : (
                   <svg xmlns="http://www.w3.org/2000/svg" className="h-24 w-24 text-gray-600" fill="currentColor" viewBox="0 0 20 20">
@@ -290,15 +268,20 @@ const Profile = () => {
               <label className="block">
                 <input
                   type="file"
-                  accept="image/*"
+                  accept="image/jpeg,image/png,image/webp"
                   onChange={handlePhotoUpload}
                   className="hidden"
+                  disabled={uploadingAvatar}
                 />
-                <span className="border-2 border-[#323FF0] text-[#323FF0] px-6 py-3 rounded-lg cursor-pointer hover:bg-[#323FF0] hover:text-white transition-colors inline-block">
-                  Загрузить фото
+                <span className={`border-2 px-6 py-3 rounded-lg cursor-pointer transition-colors inline-block ${
+                  uploadingAvatar 
+                    ? 'border-gray-400 text-gray-400 cursor-not-allowed' 
+                    : 'border-[#323FF0] text-[#323FF0] hover:bg-[#323FF0] hover:text-white'
+                }`}>
+                  {uploadingAvatar ? 'Загрузка...' : 'Загрузить фото'}
                 </span>
               </label>
-              <p className="text-sm text-gray-500 mt-2">JPG, PNG до 5MB</p>
+              <p className="text-sm text-gray-500 mt-2">JPG, PNG, WebP до 5MB</p>
             </div>
           </div>
         </div>
