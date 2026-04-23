@@ -1,5 +1,5 @@
 // src/components/FormInput.tsx
-import React, { ChangeEvent } from 'react';
+import { ChangeEvent, useId } from 'react'; 
 
 interface OptionType {
   id?: string | number;
@@ -12,7 +12,7 @@ interface OptionType {
 interface FormInputProps {
   label?: string;
   placeholder?: string;
-  value: string;
+  value: string | number;
   onChange: (e: ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => void;
   type?: string;
   isTextarea?: boolean;
@@ -51,13 +51,18 @@ const FormInput = ({
   step,
   ...props
 }: FormInputProps) => {
-  const inputClasses = `w-full px-4 py-3 text-lg border-2 border-gray-900 rounded-lg focus:outline-none focus:border-[#323FF0] transition-colors ${className} ${error ? 'border-red-500' : ''
-    } ${disabled ? 'bg-gray-100 cursor-not-allowed' : ''}`;
+  
+  const generatedId = useId();
+  const finalId = id || generatedId;
+
+  const inputClasses = `w-full px-4 py-3 text-lg border-2 rounded-lg focus:outline-none focus:border-[#323FF0] transition-colors ${className} ${
+    error ? 'border-red-500' : 'border-gray-900'
+  } ${disabled ? 'bg-gray-100 cursor-not-allowed' : ''}`;
 
   return (
     <div className="mb-4">
       {label && (
-        <label htmlFor={id} className="block text-lg font-medium text-gray-900 mb-2">
+        <label htmlFor={finalId} className="block text-lg font-medium text-gray-900 mb-2">
           {label} {required && <span className="text-red-500">*</span>}
         </label>
       )}
@@ -72,7 +77,7 @@ const FormInput = ({
           disabled={disabled}
           required={required}
           name={name}
-          id={id}
+          id={finalId}
           {...props}
         />
       ) : isSelect ? (
@@ -83,7 +88,7 @@ const FormInput = ({
           disabled={disabled}
           required={required}
           name={name}
-          id={id}
+          id={finalId}
           {...props}
         >
           {placeholder && <option value="">{placeholder}</option>}
@@ -107,7 +112,7 @@ const FormInput = ({
           disabled={disabled}
           required={required}
           name={name}
-          id={id}
+          id={finalId}
           min={min}
           max={max}
           step={step}
