@@ -1,4 +1,53 @@
-frontend-tests:
+name: CI/CD Tests
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  backend-tests:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:15
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: password
+          POSTGRES_DB: test_db
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+      - uses: actions/checkout@v5
+      
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: '3.11'
+      
+      - name: Install dependencies
+        run: |
+          cd backend
+          pip install -r requirements.txt
+          pip install pytest pytest-cov pytest-asyncio httpx
+      
+      - name: Run Backend Tests
+        run: |
+          cd backend
+          pytest --cov=app --cov-report=xml
+        env:
+          DATABASE_URL: postgresql://postgres:password@localhost:5432/test_db
+          SECRET_KEY: test-secret-key
+          YANDEX_MAPS_API_KEY: dummy-key
+
+  frontend-tests:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v5
@@ -19,4 +68,3 @@ frontend-tests:
         run: |
           cd frontend
           npm run test -- --run
-      
