@@ -1,4 +1,4 @@
-import React, { useState, useEffect, MouseEvent } from 'react';
+import { useState, useEffect, MouseEvent } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { groupsAPI, Group } from '../services/api';
 

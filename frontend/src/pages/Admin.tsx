@@ -17,7 +17,6 @@ const Admin = () => {
   const [groups, setGroups] = useState<Group[]>([]);
   const [dataLoading, setDataLoading] = useState<boolean>(true);
   const [searchTerm, setSearchTerm] = useState<string>('');
-  const [editingUser, setEditingUser] = useState<User | null>(null);
   const [editingEvent, setEditingEvent] = useState<Event | null>(null);
   const [editingGroup, setEditingGroup] = useState<Group | null>(null);
 

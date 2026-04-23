@@ -26,7 +26,7 @@ interface FormErrors {
 
 const CreateGroupPage = () => {
     const navigate = useNavigate();
-    const { user, isAuthenticated } = useAuth();
+    const { isAuthenticated } = useAuth();
 
     const [formData, setFormData] = useState<GroupFormData>({
         name: '',
@@ -54,7 +54,7 @@ const CreateGroupPage = () => {
         try {
             setLoadingEvents(true);
             const eventsResponse = await eventsAPI.getAllEvents();
-            setEvents(eventsResponse.data);
+            setEvents(eventsResponse.data.items); 
         } catch (error) {
             console.error('Ошибка загрузки событий:', error);
             setErrors({ submit: 'Не удалось загрузить список событий' });
