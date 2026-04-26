@@ -1,41 +1,64 @@
 import boto3
 from botocore.client import Config
 from app.api.core.config import settings
-from datetime import timedelta
+from io import BytesIO
 
-s3_client = boto3.client(
-    's3',
-    endpoint_url=settings.S3_ENDPOINT,
-    aws_access_key_id=settings.S3_ACCESS_KEY,
-    aws_secret_access_key=settings.S3_SECRET_KEY,
-    config=Config(signature_version='s3v4'),
-    region_name='us-east-1'
-)
+def get_s3_client():
+    if not settings.S3_ENDPOINT:
+        raise ValueError("S3_ENDPOINT is not set!")
+        
+    return boto3.client(
+        's3',
+        endpoint_url=settings.S3_ENDPOINT,
+        aws_access_key_id=settings.S3_ACCESS_KEY,
+        aws_secret_access_key=settings.S3_SECRET_KEY,
+        config=Config(signature_version='s3v4'),
+        region_name='us-east-1'
+    )
 
-def upload_avatar(file_bytes: bytes, user_id: int, filename: str, content_type: str) -> str:
-    key = f"avatars/{user_id}/{filename}"
+def upload_avatar(file_bytes, user_id: int, filename: str, content_type: str) -> str:
+    client = get_s3_client()
     
-    s3_client.upload_fileobj(
-        file_bytes, 
-        settings.S3_BUCKET_NAME, 
-        key,
-        ExtraArgs={'ContentType': content_type}
-    )
+    import re
+    clean_filename = re.sub(r'[^\w\.-]', '_', filename)
+    key = f"avatars/{user_id}/{clean_filename}"
     
-    url = s3_client.generate_presigned_url(
-        'get_object',
-        Params={'Bucket': settings.S3_BUCKET_NAME, 'Key': key},
-        ExpiresIn=7 * 24 * 60 * 60
-    )
+    if isinstance(file_bytes, BytesIO):
+        file_obj = file_bytes
+        file_obj.seek(0)
+    elif isinstance(file_bytes, bytes):
+        file_obj = BytesIO(file_bytes)
+    else:
+        raise TypeError(f"Expected bytes or BytesIO, got {type(file_bytes)}")
+
+    try:
+        client.upload_fileobj(
+            file_obj, 
+            settings.S3_BUCKET,
+            key,
+            ExtraArgs={'ContentType': content_type}
+        )
+        print(f"File uploaded to: {settings.S3_BUCKET}/{key}")
+    except Exception as e:
+        print(f"S3 Upload Error: {e}")
+        raise
     
-    return url
+    public_url = f"http://localhost:9000/{settings.S3_BUCKET}/{key}"
+    print(f"📷 Public URL: {public_url}")
+    
+    return public_url
 
 def delete_avatar(file_url: str) -> bool:
+    client = get_s3_client()
     try:
-        key = file_url.split('?')[0].split(f'{settings.S3_ENDPOINT}/')[-1]
-        
-        s3_client.delete_object(
-            Bucket=settings.S3_BUCKET_NAME, 
+        prefix = f"{settings.S3_ENDPOINT}/{settings.S3_BUCKET}/"
+        if prefix in file_url:
+            key = file_url.split('?')[0].replace(prefix, "")
+        else:
+            key = file_url.split('?')[0].split('/')[-1]
+            
+        client.delete_object(
+            Bucket=settings.S3_BUCKET, 
             Key=key
         )
         return True

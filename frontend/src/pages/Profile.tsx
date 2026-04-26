@@ -90,20 +90,24 @@ const Profile = () => {
     try {
       setUploadingAvatar(true);
       setError(null);
-      
+
       const formData = new FormData();
       formData.append('file', file);
-      
+
       const response = await userAPI.uploadAvatar(formData);
-      
+
       if (updateUser) {
-        updateUser({ avatar_url: response.data.avatar_url });
+        updateUser({
+          ...user,
+          avatar_url: response.data.avatar_url
+        });
       }
+
+      event.target.value = '';
     } catch (err: any) {
-      setError('Ошибка загрузки: ' + (err.response?.data?.detail || err.message || 'Неизвестная ошибка'));
+      setError('Ошибка загрузки: ' + (err.response?.data?.detail || err.message));
     } finally {
       setUploadingAvatar(false);
-      event.target.value = '';
     }
   };
 
@@ -255,14 +259,20 @@ const Profile = () => {
                     alt="Profile"
                     className="w-full h-full object-cover"
                     onError={(e) => {
-                      (e.target as HTMLImageElement).src = '/default-avatar.png';
+                      (e.target as HTMLImageElement).style.display = 'none';
+                      const svg = (e.target as HTMLImageElement).nextElementSibling;
+                      if (svg) svg.classList.remove('hidden');
                     }}
                   />
-                ) : (
-                  <svg xmlns="http://www.w3.org/2000/svg" className="h-24 w-24 text-gray-600" fill="currentColor" viewBox="0 0 20 20">
-                    <path fillRule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clipRule="evenodd" />
-                  </svg>
-                )}
+                ) : null}
+
+                <svg
+                  className={`h-24 w-24 text-gray-600 ${avatarUrl ? 'hidden' : ''}`}
+                  fill="currentColor"
+                  viewBox="0 0 20 20"
+                >
+                  <path fillRule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clipRule="evenodd" />
+                </svg>
               </div>
 
               <label className="block">
@@ -273,11 +283,10 @@ const Profile = () => {
                   className="hidden"
                   disabled={uploadingAvatar}
                 />
-                <span className={`border-2 px-6 py-3 rounded-lg cursor-pointer transition-colors inline-block ${
-                  uploadingAvatar 
-                    ? 'border-gray-400 text-gray-400 cursor-not-allowed' 
-                    : 'border-[#323FF0] text-[#323FF0] hover:bg-[#323FF0] hover:text-white'
-                }`}>
+                <span className={`border-2 px-6 py-3 rounded-lg cursor-pointer transition-colors inline-block ${uploadingAvatar
+                  ? 'border-gray-400 text-gray-400 cursor-not-allowed'
+                  : 'border-[#323FF0] text-[#323FF0] hover:bg-[#323FF0] hover:text-white'
+                  }`}>
                   {uploadingAvatar ? 'Загрузка...' : 'Загрузить фото'}
                 </span>
               </label>
